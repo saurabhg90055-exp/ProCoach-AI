@@ -20,7 +20,7 @@ from slowapi.errors import RateLimitExceeded
 from sqlalchemy.orm import Session
 
 # Import database and auth modules
-from database import get_db, init_db, User, Interview, InterviewQuestion, UserSettings, APIUsage
+from database import get_db, init_db, User, Interview, InterviewQuestion, UserSettings, APIUsage, UserXP, UserAchievement
 from auth import (
     UserCreate, UserResponse, UserLogin, Token, PasswordChange, UserUpdate,
     create_user, authenticate_user, get_user_by_email, get_user_by_username,
@@ -1461,6 +1461,299 @@ async def get_user_stats(
         "improvement": improvement,
         "member_since": current_user.created_at.strftime("%Y-%m-%d") if current_user.created_at else None,
         "is_premium": current_user.is_premium
+    }
+
+
+# ============== XP & ACHIEVEMENTS SYSTEM ==============
+
+# Achievement definitions
+ACHIEVEMENTS = [
+    {"id": "first_interview", "name": "First Steps", "description": "Complete your first interview", "xp_reward": 50},
+    {"id": "five_interviews", "name": "Getting Serious", "description": "Complete 5 interviews", "xp_reward": 100},
+    {"id": "ten_interviews", "name": "Interview Veteran", "description": "Complete 10 interviews", "xp_reward": 200},
+    {"id": "perfect_score", "name": "Perfect Performance", "description": "Score 100% on an interview", "xp_reward": 150},
+    {"id": "streak_3", "name": "On Fire", "description": "Maintain a 3-day streak", "xp_reward": 75},
+    {"id": "streak_7", "name": "Week Warrior", "description": "Maintain a 7-day streak", "xp_reward": 150},
+    {"id": "streak_30", "name": "Monthly Master", "description": "Maintain a 30-day streak", "xp_reward": 500},
+    {"id": "hard_mode", "name": "Challenge Accepted", "description": "Complete a hard difficulty interview", "xp_reward": 100},
+    {"id": "all_topics", "name": "Jack of All Trades", "description": "Try all interview topics", "xp_reward": 200},
+    {"id": "high_scorer", "name": "High Achiever", "description": "Average score above 80%", "xp_reward": 150},
+    {"id": "speed_demon", "name": "Speed Demon", "description": "Answer 10 questions in one session", "xp_reward": 100},
+    {"id": "night_owl", "name": "Night Owl", "description": "Practice after midnight", "xp_reward": 50},
+    {"id": "early_bird", "name": "Early Bird", "description": "Practice before 7 AM", "xp_reward": 50},
+]
+
+
+def calculate_level(total_xp: int) -> dict:
+    """Calculate level from total XP"""
+    level = 1
+    xp_required = 100
+    remaining_xp = total_xp
+    
+    while remaining_xp >= xp_required:
+        remaining_xp -= xp_required
+        level += 1
+        xp_required = level * 100
+    
+    return {
+        "level": level,
+        "current_xp": remaining_xp,
+        "xp_to_next_level": xp_required,
+        "progress": round((remaining_xp / xp_required) * 100, 1)
+    }
+
+
+def calculate_xp_gain(score: int, difficulty: str, question_count: int, streak_bonus: int = 0) -> int:
+    """Calculate XP gained from an interview"""
+    base_xp = score * 10
+    difficulty_multiplier = {"easy": 1, "medium": 1.5, "hard": 2}.get(difficulty, 1)
+    question_bonus = question_count * 5
+    streak_xp = streak_bonus * 10
+    
+    return int(base_xp * difficulty_multiplier + question_bonus + streak_xp)
+
+
+@app.get("/user/xp")
+async def get_user_xp(
+    current_user: User = Depends(get_current_user_required),
+    db: Session = Depends(get_db)
+):
+    """Get user's XP and level information"""
+    user_xp = db.query(UserXP).filter(UserXP.user_id == current_user.id).first()
+    
+    if not user_xp:
+        # Create XP record if doesn't exist
+        user_xp = UserXP(user_id=current_user.id)
+        db.add(user_xp)
+        db.commit()
+        db.refresh(user_xp)
+    
+    level_info = calculate_level(user_xp.total_xp)
+    
+    return {
+        "total_xp": user_xp.total_xp,
+        "level": level_info["level"],
+        "current_xp": level_info["current_xp"],
+        "xp_to_next_level": level_info["xp_to_next_level"],
+        "progress": level_info["progress"],
+        "current_streak": user_xp.current_streak,
+        "longest_streak": user_xp.longest_streak,
+        "total_interviews": user_xp.total_interviews,
+        "total_questions": user_xp.total_questions,
+        "perfect_scores": user_xp.perfect_scores,
+        "average_score": round(user_xp.average_score, 1) if user_xp.average_score else 0,
+        "last_activity": user_xp.last_activity_date.isoformat() if user_xp.last_activity_date else None
+    }
+
+
+@app.post("/user/xp/add")
+async def add_user_xp(
+    score: int,
+    difficulty: str = "medium",
+    question_count: int = 1,
+    current_user: User = Depends(get_current_user_required),
+    db: Session = Depends(get_db)
+):
+    """Add XP after completing an interview"""
+    user_xp = db.query(UserXP).filter(UserXP.user_id == current_user.id).first()
+    
+    if not user_xp:
+        user_xp = UserXP(user_id=current_user.id)
+        db.add(user_xp)
+    
+    # Update streak
+    today = datetime.utcnow().date()
+    if user_xp.last_activity_date:
+        last_date = user_xp.last_activity_date.date()
+        if last_date == today:
+            pass  # Same day, no streak change
+        elif (today - last_date).days == 1:
+            user_xp.current_streak += 1  # Consecutive day
+        else:
+            user_xp.current_streak = 1  # Streak broken
+    else:
+        user_xp.current_streak = 1
+    
+    # Update longest streak
+    if user_xp.current_streak > user_xp.longest_streak:
+        user_xp.longest_streak = user_xp.current_streak
+    
+    # Calculate XP
+    xp_gained = calculate_xp_gain(score, difficulty, question_count, user_xp.current_streak)
+    user_xp.total_xp += xp_gained
+    
+    # Update stats
+    user_xp.total_interviews += 1
+    user_xp.total_questions += question_count
+    if score == 100:
+        user_xp.perfect_scores += 1
+    
+    # Update average score
+    total_score = (user_xp.average_score * (user_xp.total_interviews - 1)) + score
+    user_xp.average_score = total_score / user_xp.total_interviews
+    
+    user_xp.last_activity_date = datetime.utcnow()
+    
+    db.commit()
+    db.refresh(user_xp)
+    
+    # Check for new achievements
+    new_achievements = check_achievements(user_xp, difficulty, db, current_user.id)
+    
+    level_info = calculate_level(user_xp.total_xp)
+    
+    return {
+        "xp_gained": xp_gained,
+        "total_xp": user_xp.total_xp,
+        "level": level_info["level"],
+        "progress": level_info["progress"],
+        "new_achievements": new_achievements,
+        "current_streak": user_xp.current_streak
+    }
+
+
+def check_achievements(user_xp: UserXP, difficulty: str, db: Session, user_id: int) -> list:
+    """Check and unlock new achievements"""
+    new_achievements = []
+    
+    # Get existing achievements
+    existing = db.query(UserAchievement).filter(UserAchievement.user_id == user_id).all()
+    existing_ids = {a.achievement_id for a in existing}
+    
+    # Check conditions
+    checks = [
+        ("first_interview", user_xp.total_interviews >= 1),
+        ("five_interviews", user_xp.total_interviews >= 5),
+        ("ten_interviews", user_xp.total_interviews >= 10),
+        ("perfect_score", user_xp.perfect_scores >= 1),
+        ("streak_3", user_xp.current_streak >= 3),
+        ("streak_7", user_xp.current_streak >= 7),
+        ("streak_30", user_xp.current_streak >= 30),
+        ("hard_mode", difficulty == "hard"),
+        ("high_scorer", user_xp.average_score >= 80),
+        ("speed_demon", user_xp.total_questions >= 10),
+    ]
+    
+    # Check time-based achievements
+    current_hour = datetime.utcnow().hour
+    if 0 <= current_hour < 5:
+        checks.append(("night_owl", True))
+    if 5 <= current_hour < 7:
+        checks.append(("early_bird", True))
+    
+    for achievement_id, condition in checks:
+        if condition and achievement_id not in existing_ids:
+            # Unlock achievement
+            new_achievement = UserAchievement(user_id=user_id, achievement_id=achievement_id)
+            db.add(new_achievement)
+            
+            # Add XP reward
+            achievement_def = next((a for a in ACHIEVEMENTS if a["id"] == achievement_id), None)
+            if achievement_def:
+                user_xp.total_xp += achievement_def["xp_reward"]
+                new_achievements.append(achievement_def)
+    
+    db.commit()
+    return new_achievements
+
+
+@app.get("/user/achievements")
+async def get_user_achievements(
+    current_user: User = Depends(get_current_user_required),
+    db: Session = Depends(get_db)
+):
+    """Get user's achievements"""
+    unlocked = db.query(UserAchievement).filter(
+        UserAchievement.user_id == current_user.id
+    ).all()
+    
+    unlocked_ids = {a.achievement_id for a in unlocked}
+    unlocked_dates = {a.achievement_id: a.unlocked_at for a in unlocked}
+    
+    return {
+        "achievements": [
+            {
+                **achievement,
+                "unlocked": achievement["id"] in unlocked_ids,
+                "unlocked_at": unlocked_dates.get(achievement["id"], None)
+            }
+            for achievement in ACHIEVEMENTS
+        ],
+        "total_unlocked": len(unlocked),
+        "total_achievements": len(ACHIEVEMENTS)
+    }
+
+
+@app.get("/user/dashboard")
+async def get_user_dashboard(
+    current_user: User = Depends(get_current_user_required),
+    db: Session = Depends(get_db)
+):
+    """Get comprehensive dashboard data for authenticated user"""
+    # Get XP data
+    user_xp = db.query(UserXP).filter(UserXP.user_id == current_user.id).first()
+    if not user_xp:
+        user_xp = UserXP(user_id=current_user.id)
+        db.add(user_xp)
+        db.commit()
+        db.refresh(user_xp)
+    
+    level_info = calculate_level(user_xp.total_xp)
+    
+    # Get achievements
+    unlocked = db.query(UserAchievement).filter(
+        UserAchievement.user_id == current_user.id
+    ).all()
+    unlocked_ids = [a.achievement_id for a in unlocked]
+    
+    # Get recent interviews
+    recent_interviews = db.query(Interview).filter(
+        Interview.user_id == current_user.id,
+        Interview.status == "completed"
+    ).order_by(Interview.started_at.desc()).limit(10).all()
+    
+    interview_history = [
+        {
+            "id": i.id,
+            "date": i.started_at.isoformat() if i.started_at else None,
+            "topic": i.topic_name or i.topic,
+            "difficulty": i.difficulty,
+            "score": i.average_score,
+            "questions": i.question_count
+        }
+        for i in recent_interviews
+    ]
+    
+    return {
+        "user": {
+            "id": current_user.id,
+            "username": current_user.username,
+            "email": current_user.email,
+            "full_name": current_user.full_name,
+            "is_premium": current_user.is_premium,
+            "member_since": current_user.created_at.isoformat() if current_user.created_at else None
+        },
+        "xp": {
+            "total_xp": user_xp.total_xp,
+            "level": level_info["level"],
+            "current_xp": level_info["current_xp"],
+            "xp_to_next_level": level_info["xp_to_next_level"],
+            "progress": level_info["progress"]
+        },
+        "stats": {
+            "total_interviews": user_xp.total_interviews,
+            "total_questions": user_xp.total_questions,
+            "average_score": round(user_xp.average_score, 1) if user_xp.average_score else 0,
+            "perfect_scores": user_xp.perfect_scores,
+            "current_streak": user_xp.current_streak,
+            "longest_streak": user_xp.longest_streak
+        },
+        "achievements": {
+            "unlocked": unlocked_ids,
+            "total_unlocked": len(unlocked_ids),
+            "total_available": len(ACHIEVEMENTS)
+        },
+        "recent_interviews": interview_history
     }
 
 

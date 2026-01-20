@@ -1,7 +1,8 @@
 .dashboard {
-    max-width: 1000px;
+    width: 100%;
+    max-width: 100%;
     margin: 0 auto;
-    padding: 2rem;
+    padding: 0;
 }
 
 /* Header */
@@ -15,20 +16,73 @@
 .header-content h1 {
     font-size: 1.75rem;
     font-weight: 700;
-    color: #fff;
+    color: var(--color-text, #fff);
     margin-bottom: 0.25rem;
 }
 
 .header-content p {
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--color-textMuted, rgba(255, 255, 255, 0.6));
+}
+
+.header-content p strong {
+    color: var(--color-primary, #6366f1);
+}
+
+.login-hint {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--color-textMuted, rgba(255, 255, 255, 0.4));
+    margin-top: 0.5rem;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.refresh-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: var(--color-surface, rgba(255, 255, 255, 0.05));
+    border: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
+    border-radius: 8px;
+    color: var(--color-textMuted, rgba(255, 255, 255, 0.6));
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.refresh-btn:hover:not(:disabled) {
+    background: var(--color-surfaceHover, rgba(255, 255, 255, 0.1));
+    color: var(--color-text, #fff);
+}
+
+.refresh-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.refresh-btn.spinning svg,
+.spinning {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
 .period-select {
     padding: 0.5rem 1rem;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--color-surface, rgba(255, 255, 255, 0.05));
+    border: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
     border-radius: 8px;
-    color: #fff;
+    color: var(--color-text, #fff);
     cursor: pointer;
 }
 
@@ -50,8 +104,8 @@
     align-items: center;
     gap: 1rem;
     padding: 1.25rem;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--color-surface, rgba(255, 255, 255, 0.05));
+    border: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
     border-radius: 16px;
 }
 
@@ -85,12 +139,12 @@
 .card-value {
     font-size: 1.5rem;
     font-weight: 700;
-    color: #fff;
+    color: var(--color-text, #fff);
 }
 
 .card-label {
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--color-textMuted, rgba(255, 255, 255, 0.5));
 }
 
 /* Section Headers */
@@ -107,15 +161,15 @@
     gap: 0.5rem;
     font-size: 1rem;
     font-weight: 600;
-    color: #fff;
+    color: var(--color-text, #fff);
 }
 
 /* Chart Section */
 .chart-section {
     padding: 1.5rem;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--color-surface, rgba(255, 255, 255, 0.05));
     border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
     margin-bottom: 2rem;
 }
 
@@ -166,21 +220,21 @@
 .bar-label {
     margin-top: 0.5rem;
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--color-textMuted, rgba(255, 255, 255, 0.5));
 }
 
 /* Achievements Section */
 .achievements-section {
     padding: 1.5rem;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--color-surface, rgba(255, 255, 255, 0.05));
     border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
     margin-bottom: 2rem;
 }
 
 .achievement-count {
     font-size: 0.875rem;
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--color-textMuted, rgba(255, 255, 255, 0.5));
 }
 
 .achievements-grid {
@@ -193,10 +247,16 @@
 /* History Section */
 .history-section {
     padding: 1.5rem;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--color-surface, rgba(255, 255, 255, 0.05));
     border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
     margin-bottom: 2rem;
+}
+
+.history-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
 }
 
 .toggle-history {
@@ -205,17 +265,17 @@
     gap: 0.25rem;
     padding: 0.5rem 0.75rem;
     background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid var(--color-border, rgba(255, 255, 255, 0.2));
     border-radius: 8px;
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--color-textMuted, rgba(255, 255, 255, 0.6));
     font-size: 0.75rem;
     cursor: pointer;
     transition: all 0.3s ease;
 }
 
 .toggle-history:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.3);
+    background: var(--color-surfaceHover, rgba(255, 255, 255, 0.05));
+    border-color: var(--color-border, rgba(255, 255, 255, 0.3));
 }
 
 .history-list {
@@ -241,17 +301,47 @@
 .history-info {
     display: flex;
     flex-direction: column;
+    gap: 0.25rem;
 }
 
 .history-topic {
     font-weight: 500;
-    color: #fff;
+    color: var(--color-text, #fff);
     text-transform: capitalize;
+}
+
+.history-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .history-date {
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--color-textMuted, rgba(255, 255, 255, 0.5));
+}
+
+.difficulty-badge {
+    padding: 0.125rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.difficulty-badge.easy {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+}
+
+.difficulty-badge.medium {
+    background: rgba(251, 191, 36, 0.2);
+    color: #f59e0b;
+}
+
+.difficulty-badge.hard {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
 }
 
 .history-score {
@@ -263,9 +353,29 @@
 }
 
 .empty-history {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
     text-align: center;
     padding: 2rem;
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--color-textMuted, rgba(255, 255, 255, 0.5));
+}
+
+.empty-history svg {
+    opacity: 0.3;
+}
+
+.loading-history {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    text-align: center;
+    padding: 2rem;
+    color: var(--color-textMuted, rgba(255, 255, 255, 0.5));
 }
 
 /* Quick Stats */

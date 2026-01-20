@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Settings, X, Volume2, VolumeX, Mic, Moon, Sun, 
-    Keyboard, Bell, Eye, Zap, HelpCircle
+    Keyboard, Bell, Eye, Zap, HelpCircle, User, Shield, Download
 } from 'lucide-react';
 import { ThemeSelector, useTheme } from '../theme/ThemeProvider';
+import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
 import './SettingsPanel.css';
 
 const SettingsPanel = ({ 
@@ -14,13 +16,21 @@ const SettingsPanel = ({
     onSettingsChange
 }) => {
     const { themeName, setTheme, availableThemes, themes } = useTheme();
+    const { user, isAuthenticated, updateProfile } = useAuth();
+    const toast = useToast();
     const [activeTab, setActiveTab] = useState('general');
+    const [profileForm, setProfileForm] = useState({
+        fullName: user?.full_name || '',
+        email: user?.email || ''
+    });
+    const [isSaving, setIsSaving] = useState(false);
 
     const tabs = [
         { id: 'general', label: 'General', icon: <Settings size={18} /> },
         { id: 'audio', label: 'Audio', icon: <Volume2 size={18} /> },
         { id: 'display', label: 'Display', icon: <Eye size={18} /> },
         { id: 'notifications', label: 'Notifications', icon: <Bell size={18} /> },
+        ...(isAuthenticated ? [{ id: 'profile', label: 'Profile', icon: <User size={18} /> }] : [])
     ];
 
     const handleToggle = (key) => {
@@ -29,6 +39,43 @@ const SettingsPanel = ({
 
     const handleSlider = (key, value) => {
         onSettingsChange({ ...settings, [key]: value });
+    };
+    
+    const handleSaveProfile = async () => {
+        setIsSaving(true);
+        try {
+            const result = await updateProfile({ full_name: profileForm.fullName });
+            if (result && !result.detail) {
+                toast.success('Profile updated successfully');
+            } else {
+                toast.error(result?.detail || 'Failed to update profile');
+            }
+        } catch (err) {
+            toast.error('Failed to update profile');
+        }
+        setIsSaving(false);
+    };
+    
+    const handleExportData = () => {
+        // Export all user data as JSON
+        const exportData = {
+            settings,
+            interviewHistory: JSON.parse(localStorage.getItem('interviewHistory') || '[]'),
+            xpData: JSON.parse(localStorage.getItem('xpSystem') || '{}'),
+            exportedAt: new Date().toISOString()
+        };
+        
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ai-interviewer-data-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        toast.success('Data exported successfully');
     };
 
     return (
@@ -274,6 +321,84 @@ const SettingsPanel = ({
                                             checked={settings?.progressUpdates ?? true}
                                             onChange={() => handleToggle('progressUpdates')}
                                         />
+                                    </div>
+                                </div>
+                            )}
+                            
+                            {/* Profile Tab */}
+                            {activeTab === 'profile' && isAuthenticated && (
+                                <div className="settings-section">
+                                    <div className="profile-header">
+                                        <div className="profile-avatar">
+                                            <User size={40} />
+                                        </div>
+                                        <div className="profile-info">
+                                            <span className="profile-name">{user?.username}</span>
+                                            <span className="profile-email">{user?.email}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="setting-item">
+                                        <div className="setting-info">
+                                            <span className="setting-label">Full Name</span>
+                                        </div>
+                                        <input 
+                                            type="text"
+                                            className="profile-input"
+                                            value={profileForm.fullName}
+                                            onChange={(e) => setProfileForm({...profileForm, fullName: e.target.value})}
+                                            placeholder="Enter your full name"
+                                        />
+                                    </div>
+                                    
+                                    <div className="setting-item">
+                                        <div className="setting-info">
+                                            <span className="setting-label">Email</span>
+                                        </div>
+                                        <input 
+                                            type="email"
+                                            className="profile-input"
+                                            value={user?.email || ''}
+                                            disabled
+                                        />
+                                    </div>
+                                    
+                                    <div className="profile-actions">
+                                        <button 
+                                            className="save-profile-btn"
+                                            onClick={handleSaveProfile}
+                                            disabled={isSaving}
+                                        >
+                                            {isSaving ? 'Saving...' : 'Save Changes'}
+                                        </button>
+                                    </div>
+                                    
+                                    <div className="settings-divider" />
+                                    
+                                    <div className="section-title">
+                                        <Shield size={18} />
+                                        <span>Data & Privacy</span>
+                                    </div>
+                                    
+                                    <div className="setting-item">
+                                        <div className="setting-info">
+                                            <span className="setting-label">Export your data</span>
+                                            <span className="setting-desc">Download all your interview history and settings</span>
+                                        </div>
+                                        <button className="export-btn" onClick={handleExportData}>
+                                            <Download size={16} />
+                                            Export
+                                        </button>
+                                    </div>
+                                    
+                                    <div className="setting-item">
+                                        <div className="setting-info">
+                                            <span className="setting-label">Account type</span>
+                                            <span className="setting-desc">{user?.is_premium ? 'Premium' : 'Free'}</span>
+                                        </div>
+                                        {!user?.is_premium && (
+                                            <span className="premium-badge">Upgrade</span>
+                                        )}
                                     </div>
                                 </div>
                             )}

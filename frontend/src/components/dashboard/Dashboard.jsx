@@ -1,20 +1,73 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     BarChart3, TrendingUp, Calendar, Award, Target, Clock, 
-    ChevronDown, ChevronUp, Filter, Download, Star
+    ChevronDown, ChevronUp, Filter, Download, Star, RefreshCw,
+    Loader, User, Zap
 } from 'lucide-react';
 import { LevelProgressBar, StreakCounter, AchievementBadge, ACHIEVEMENTS } from '../gamification/XPSystem';
+import { useAuth } from '../../contexts/AuthContext';
+import { interviewAPI } from '../../services/api';
 import './Dashboard.css';
 
 const Dashboard = ({
     stats,
     totalXP,
     unlockedAchievements,
-    interviewHistory = []
+    interviewHistory: localHistory = []
 }) => {
+    const { isAuthenticated, user, dashboardData, refreshDashboard } = useAuth();
     const [selectedPeriod, setSelectedPeriod] = useState('week');
     const [showAllHistory, setShowAllHistory] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [serverHistory, setServerHistory] = useState([]);
+    const [loadingHistory, setLoadingHistory] = useState(false);
+
+    // Fetch server history when authenticated
+    useEffect(() => {
+        if (isAuthenticated) {
+            fetchServerHistory();
+        }
+    }, [isAuthenticated]);
+
+    const fetchServerHistory = async () => {
+        setLoadingHistory(true);
+        try {
+            const data = await interviewAPI.getHistory();
+            if (data?.interviews) {
+                // Map server interviews to local format
+                const mapped = data.interviews.map(i => ({
+                    id: i.id,
+                    topic: i.topic_name || i.topic,
+                    date: i.started_at,
+                    score: i.average_score || 0,
+                    difficulty: i.difficulty,
+                    questionCount: i.question_count
+                }));
+                setServerHistory(mapped);
+            }
+        } catch (error) {
+            console.error('Failed to fetch history:', error);
+        }
+        setLoadingHistory(false);
+    };
+
+    // Use server history if authenticated, else local
+    const interviewHistory = isAuthenticated ? serverHistory : localHistory;
+
+    // Handle refresh
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        try {
+            await Promise.all([
+                refreshDashboard(),
+                isAuthenticated && fetchServerHistory()
+            ]);
+        } catch (error) {
+            console.error('Refresh failed:', error);
+        }
+        setIsRefreshing(false);
+    };
 
     const containerVariants = {
         hidden: { opacity: 0 },
@@ -101,9 +154,28 @@ const Dashboard = ({
             <motion.div className="dashboard-header" variants={itemVariants}>
                 <div className="header-content">
                     <h1>Your Progress</h1>
-                    <p>Track your interview performance and achievements</p>
+                    <p>
+                        {isAuthenticated ? (
+                            <>Welcome back, <strong>{user?.username}</strong>!</>
+                        ) : (
+                            'Track your interview performance and achievements'
+                        )}
+                    </p>
+                    {!isAuthenticated && (
+                        <p className="login-hint">
+                            <User size={14} /> Log in to sync your progress across devices
+                        </p>
+                    )}
                 </div>
                 <div className="header-actions">
+                    <button 
+                        className={`refresh-btn ${isRefreshing ? 'spinning' : ''}`}
+                        onClick={handleRefresh}
+                        disabled={isRefreshing}
+                        title="Refresh data"
+                    >
+                        <RefreshCw size={18} />
+                    </button>
                     <select 
                         value={selectedPeriod}
                         onChange={(e) => setSelectedPeriod(e.target.value)}
@@ -204,19 +276,22 @@ const Dashboard = ({
             <motion.div className="history-section" variants={itemVariants}>
                 <div className="section-header">
                     <h3><Clock size={20} /> Recent Interviews</h3>
-                    <button 
-                        className="toggle-history"
-                        onClick={() => setShowAllHistory(!showAllHistory)}
-                    >
-                        {showAllHistory ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                        {showAllHistory ? 'Show Less' : 'Show All'}
-                    </button>
+                    <div className="history-actions">
+                        {loadingHistory && <Loader size={14} className="spinning" />}
+                        <button 
+                            className="toggle-history"
+                            onClick={() => setShowAllHistory(!showAllHistory)}
+                        >
+                            {showAllHistory ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                            {showAllHistory ? 'Show Less' : 'Show All'}
+                        </button>
+                    </div>
                 </div>
                 <div className="history-list">
                     <AnimatePresence>
                         {(showAllHistory ? interviewHistory : interviewHistory.slice(0, 5)).map((interview, index) => (
                             <motion.div
-                                key={index}
+                                key={interview.id || index}
                                 className="history-item"
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
@@ -225,21 +300,35 @@ const Dashboard = ({
                             >
                                 <div className="history-info">
                                     <span className="history-topic">{interview.topic}</span>
-                                    <span className="history-date">
-                                        {new Date(interview.date).toLocaleDateString()}
+                                    <span className="history-meta">
+                                        <span className="history-date">
+                                            {new Date(interview.date).toLocaleDateString()}
+                                        </span>
+                                        {interview.difficulty && (
+                                            <span className={`difficulty-badge ${interview.difficulty}`}>
+                                                {interview.difficulty}
+                                            </span>
+                                        )}
                                     </span>
                                 </div>
                                 <div className="history-score" style={{ 
                                     '--score-color': interview.score >= 70 ? '#10b981' : interview.score >= 50 ? '#f59e0b' : '#ef4444'
                                 }}>
-                                    {interview.score}%
+                                    {interview.score?.toFixed(0) || 0}%
                                 </div>
                             </motion.div>
                         ))}
                     </AnimatePresence>
-                    {interviewHistory.length === 0 && (
+                    {interviewHistory.length === 0 && !loadingHistory && (
                         <div className="empty-history">
+                            <Zap size={32} />
                             <p>No interview history yet. Start practicing!</p>
+                        </div>
+                    )}
+                    {loadingHistory && interviewHistory.length === 0 && (
+                        <div className="loading-history">
+                            <Loader size={24} className="spinning" />
+                            <p>Loading your interview history...</p>
                         </div>
                     )}
                 </div>

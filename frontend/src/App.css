@@ -1,9 +1,19 @@
+/* CSS Variables for Theme Support */
+:root {
+  --text-primary: #ffffff;
+  --text-muted: rgba(255, 255, 255, 0.6);
+  --surface-bg: rgba(255, 255, 255, 0.05);
+  --surface-hover: rgba(255, 255, 255, 0.1);
+  --border-color: rgba(255, 255, 255, 0.1);
+}
+
 /* App Container */
 .app-container {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   background: var(--color-background, linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%));
+  color: var(--color-text, var(--text-primary));
 }
 
 /* App Header */
@@ -12,9 +22,9 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem 2rem;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--color-surface, rgba(0, 0, 0, 0.3));
   backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
   position: sticky;
   top: 0;
   z-index: 100;
@@ -55,7 +65,7 @@
   background: transparent;
   border: 1px solid transparent;
   border-radius: 8px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--color-textMuted, rgba(255, 255, 255, 0.6));
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
@@ -63,14 +73,14 @@
 }
 
 .nav-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
+  background: var(--color-surfaceHover, rgba(255, 255, 255, 0.05));
+  color: var(--color-text, #fff);
 }
 
 .nav-btn.active {
   background: rgba(99, 102, 241, 0.2);
-  border-color: rgba(99, 102, 241, 0.3);
-  color: #a5b4fc;
+  border-color: var(--color-primary, rgba(99, 102, 241, 0.3));
+  color: var(--color-primary, #a5b4fc);
 }
 
 .header-actions {
@@ -115,33 +125,105 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--color-surface, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
   border-radius: 10px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--color-textMuted, rgba(255, 255, 255, 0.6));
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .settings-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--color-surfaceHover, rgba(255, 255, 255, 0.1));
+  color: var(--color-text, #fff);
+}
+
+/* Auth Buttons */
+.login-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border: none;
+  border-radius: 8px;
   color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.login-btn:hover {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.user-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--color-surface, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
+  border-radius: 8px;
+  color: var(--color-text, #fff);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: default;
+}
+
+.user-name {
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: var(--color-surface, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
+  border-radius: 8px;
+  color: var(--color-textMuted, rgba(255, 255, 255, 0.6));
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.logout-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
 }
 
 /* App Main */
 .app-main {
   flex: 1;
   padding: 2rem;
-  max-width: 1200px;
+  max-width: 1000px;
   margin: 0 auto;
   width: 100%;
+  box-sizing: border-box;
 }
 
 /* Home View */
 .home-view {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
+  width: 100%;
+  max-width: 100%;
 }
 
 .welcome-section {
@@ -172,15 +254,15 @@
 
 .main-subtitle {
   font-size: 1.1rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--color-textMuted, rgba(255, 255, 255, 0.6));
   max-width: 500px;
   margin: 0 auto;
 }
 
 /* Achievements View */
 .achievements-view {
-  max-width: 800px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
 }
 
 .achievements-header {
@@ -191,12 +273,12 @@
 .achievements-header h2 {
   font-size: 1.75rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--color-text, #fff);
   margin-bottom: 0.5rem;
 }
 
 .achievements-header p {
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--color-textMuted, rgba(255, 255, 255, 0.6));
 }
 
 .achievements-content {
@@ -366,11 +448,12 @@
   flex: 1;
   overflow-y: auto;
   padding: 1rem;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--color-surface, rgba(255, 255, 255, 0.02));
   border-radius: 12px;
   margin-bottom: 1rem;
   max-height: 50vh;
   min-height: 300px;
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.05));
 }
 
 .message {
@@ -405,22 +488,25 @@
   max-width: 70%;
   padding: 0.8rem 1rem;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--color-surface, rgba(255, 255, 255, 0.08));
+  color: var(--color-text, #fff);
 }
 
 .message.user .message-content {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--color-primary, #667eea) 0%, var(--color-secondary, #764ba2) 100%);
   border-bottom-right-radius: 4px;
+  color: #fff;
 }
 
 .message.assistant .message-content {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--color-surface, rgba(255, 255, 255, 0.1));
   border-bottom-left-radius: 4px;
+  color: var(--color-text, #fff);
 }
 
 .message-role {
   font-size: 0.75rem;
-  color: #a0aec0;
+  color: var(--color-textMuted, #a0aec0);
   text-transform: uppercase;
   font-weight: 600;
   display: block;
@@ -428,12 +514,13 @@
 }
 
 .message.user .message-role {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .message-content p {
   margin: 0;
   line-height: 1.5;
+  color: inherit;
 }
 
 /* Typing Indicator */
@@ -2697,4 +2784,91 @@
   .header-info {
     flex-wrap: wrap;
   }
+}
+
+/* ============================================
+   THEME VARIABLE OVERRIDES FOR ALL THEMES
+   ============================================ */
+
+/* Ensure all text colors use theme variables */
+.setup-card h2, .summary-card h2 {
+  color: var(--color-primary, #667eea);
+}
+
+.setup-form label,
+.form-group label,
+.auth-modal label {
+  color: var(--color-textMuted, #a0aec0);
+}
+
+/* Form inputs */
+.topic-select,
+.jd-textarea,
+.auth-modal input {
+  color: var(--color-text, #fff);
+  background: var(--color-surface, rgba(255, 255, 255, 0.05));
+  border-color: var(--color-border, rgba(255, 255, 255, 0.2));
+}
+
+.topic-select option {
+  background: var(--color-surface, #1a1a2e);
+  color: var(--color-text, #fff);
+}
+
+/* Summary and content texts */
+.summary-text,
+.feedback-text,
+.feedback-answer,
+.tip,
+.exercise-item p {
+  color: var(--color-text, #e2e8f0);
+}
+
+/* History and stats */
+.history-item-topic,
+.stat-value,
+.analysis-item .value,
+.status-score,
+.tip-content strong {
+  color: var(--color-text, #fff);
+}
+
+.history-item-date,
+.stat-label,
+.analysis-item .label,
+.status-message,
+.tip-content p,
+.metric-label,
+.coaching-loading,
+.coaching-empty,
+.auth-switch,
+.criteria-item .label,
+.plan-duration,
+.feedback-question strong,
+.feedback-answer strong,
+.feedback-text strong {
+  color: var(--color-textMuted, #a0aec0);
+}
+
+/* Muted icons */
+.nav-btn svg,
+.settings-btn svg,
+.tab-btn svg,
+.close-btn svg {
+  color: inherit;
+}
+
+/* Welcome section alignment fix */
+.welcome-section {
+  text-align: center;
+  margin-bottom: 2rem;
+  width: 100%;
+}
+
+/* Ensure consistent section padding */
+.achievements-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  width: 100%;
 }

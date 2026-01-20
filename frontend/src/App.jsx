@@ -7,7 +7,10 @@ import SettingsPanel from './components/settings/SettingsPanel';
 import { useXPSystem, LevelProgressBar, XPGainPopup, AchievementUnlock } from './components/gamification/XPSystem';
 import Dashboard from './components/dashboard/Dashboard';
 import { useKeyboardShortcuts, KeyboardShortcutsHelp } from './hooks/useKeyboardShortcuts.jsx';
-import { Settings, BarChart2, Home, Trophy, Sparkles } from 'lucide-react';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ToastProvider, useToast } from './contexts/ToastContext';
+import { AuthModal } from './components/auth';
+import { Settings, BarChart2, Home, Trophy, Sparkles, LogIn, LogOut, User } from 'lucide-react';
 import './App.css';
 import './components/gamification/XPSystem.css';
 import './components/theme/ThemeProvider.css';
@@ -16,6 +19,13 @@ function AppContent() {
   const [currentView, setCurrentView] = useState('home'); // 'home', 'interview', 'dashboard'
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState('login');
+  
+  // Auth context
+  const { user, isAuthenticated, isLoading: authLoading, logout, dashboardData, addXP, syncSettings } = useAuth();
+  const toast = useToast();
+  
   const [settings, setSettings] = useState(() => {
     const saved = localStorage.getItem('appSettings');
     return saved ? JSON.parse(saved) : {
@@ -36,7 +46,7 @@ function AppContent() {
     };
   });
 
-  // XP System
+  // XP System (for non-authenticated users, falls back to localStorage)
   const {
     totalXP,
     stats,
@@ -49,6 +59,15 @@ function AppContent() {
     clearNewAchievement
   } = useXPSystem();
 
+  // Use authenticated user's data if available
+  const displayTotalXP = isAuthenticated && dashboardData ? dashboardData.xp?.total_xp : totalXP;
+  const displayLevelInfo = isAuthenticated && dashboardData ? {
+    level: dashboardData.xp?.level,
+    progress: dashboardData.xp?.progress
+  } : levelInfo;
+  const displayStats = isAuthenticated && dashboardData ? dashboardData.stats : stats;
+  const displayAchievements = isAuthenticated && dashboardData ? dashboardData.achievements?.unlocked : unlockedAchievements;
+
   // Confetti
   const confetti = useConfetti();
 
@@ -58,26 +77,58 @@ function AppContent() {
     cancel_action: () => {
       setShortcutsOpen(false);
       setSettingsOpen(false);
+      setAuthModalOpen(false);
     }
   }, settings.keyboardShortcuts);
 
   // Handle settings change
-  const handleSettingsChange = (newSettings) => {
+  const handleSettingsChange = async (newSettings) => {
     setSettings(newSettings);
     localStorage.setItem('appSettings', JSON.stringify(newSettings));
+    
+    // Sync with server if authenticated
+    if (isAuthenticated) {
+      await syncSettings(newSettings);
+    }
   };
 
   // Handle interview complete
-  const handleInterviewComplete = useCallback((score, difficulty, questionCount) => {
+  const handleInterviewComplete = useCallback(async (score, difficulty, questionCount) => {
+    // If authenticated, sync XP with server
+    if (isAuthenticated) {
+      const result = await addXP(score, difficulty, questionCount);
+      if (result?.new_achievements?.length > 0) {
+        result.new_achievements.forEach(achievement => {
+          toast.success(`🏆 Achievement Unlocked: ${achievement.name}`);
+        });
+      }
+    }
+    
+    // Also record locally for immediate UI feedback
     const xpGained = recordInterview(score, difficulty, questionCount);
+    
+    // Show XP gain toast
+    if (xpGained > 0) {
+      toast.success(`+${xpGained} XP earned!`);
+    }
     
     // Trigger confetti for good scores
     if (score >= 70) {
       confetti.celebrate();
+      toast.success(`Great job! Score: ${score.toFixed(0)}% 🎉`);
+    } else if (score >= 50) {
+      toast.info(`Good effort! Score: ${score.toFixed(0)}%`);
+    } else {
+      toast.info(`Keep practicing! Score: ${score.toFixed(0)}%`);
     }
     
     return xpGained;
-  }, [recordInterview, confetti]);
+  }, [recordInterview, confetti, isAuthenticated, addXP, toast]);
+
+  const openAuthModal = (mode = 'login') => {
+    setAuthModalMode(mode);
+    setAuthModalOpen(true);
+  };
 
   return (
     <div className="app-container">
@@ -118,14 +169,42 @@ function AppContent() {
         <div className="header-actions">
           {/* Level Progress Mini */}
           <div className="mini-level">
-            <span className="level-badge">Lvl {levelInfo.level}</span>
+            <span className="level-badge">Lvl {displayLevelInfo.level}</span>
             <div className="mini-progress">
               <div 
                 className="mini-progress-fill" 
-                style={{ width: `${levelInfo.progress}%` }}
+                style={{ width: `${displayLevelInfo.progress}%` }}
               />
             </div>
           </div>
+
+          {/* Auth Button */}
+          {isAuthenticated ? (
+            <div className="user-menu">
+              <button className="user-btn" title={user?.username || 'User'}>
+                <User size={18} />
+                <span className="user-name">{user?.username || 'User'}</span>
+              </button>
+              <button
+                className="logout-btn"
+                onClick={() => {
+                  logout();
+                  toast.info('Logged out successfully');
+                }}
+                title="Logout"
+              >
+                <LogOut size={18} />
+              </button>
+            </div>
+          ) : (
+            <button
+              className="login-btn"
+              onClick={() => openAuthModal('login')}
+            >
+              <LogIn size={18} />
+              <span>Login</span>
+            </button>
+          )}
 
           <button
             className="settings-btn"
@@ -172,9 +251,9 @@ function AppContent() {
               exit={{ opacity: 0, y: -20 }}
             >
               <Dashboard
-                stats={stats}
-                totalXP={totalXP}
-                unlockedAchievements={unlockedAchievements}
+                stats={displayStats}
+                totalXP={displayTotalXP}
+                unlockedAchievements={displayAchievements}
                 interviewHistory={JSON.parse(localStorage.getItem('interviewHistory') || '[]')}
               />
             </motion.div>
@@ -193,7 +272,7 @@ function AppContent() {
                 <p>Unlock achievements by practicing interviews</p>
               </div>
               <div className="achievements-content">
-                <LevelProgressBar totalXP={totalXP} showDetails={true} />
+                <LevelProgressBar totalXP={displayTotalXP} showDetails={true} />
               </div>
             </motion.div>
           )}
@@ -238,15 +317,26 @@ function AppContent() {
         isOpen={shortcutsOpen}
         onClose={() => setShortcutsOpen(false)}
       />
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        initialMode={authModalMode}
+      />
     </div>
   );
 }
 
 function App() {
   return (
-    <ThemeProvider>
-      <AppContent />
-    </ThemeProvider>
+    <AuthProvider>
+      <ToastProvider>
+        <ThemeProvider>
+          <AppContent />
+        </ThemeProvider>
+      </ToastProvider>
+    </AuthProvider>
   );
 }
 

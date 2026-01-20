@@ -2,9 +2,9 @@
 .level-progress-container {
     width: 100%;
     padding: 1rem;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--color-surface, rgba(255, 255, 255, 0.05));
     border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
 }
 
 .level-header {
@@ -29,17 +29,17 @@
 .level-number {
     font-size: 1rem;
     font-weight: 700;
-    color: #fff;
+    color: var(--color-text, #fff);
 }
 
 .xp-text {
     font-size: 0.875rem;
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--color-textMuted, rgba(255, 255, 255, 0.6));
 }
 
 .level-progress-track {
     height: 8px;
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--color-surface, rgba(255, 255, 255, 0.1));
     border-radius: 4px;
     overflow: hidden;
 }
@@ -129,8 +129,8 @@
     transform: translateX(-50%);
     width: 200px;
     padding: 1rem;
-    background: #1a1a2e;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--color-surface, #1a1a2e);
+    border: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
     border-radius: 12px;
     margin-bottom: 0.5rem;
     z-index: 100;
@@ -140,13 +140,13 @@
 .badge-tooltip h4 {
     font-size: 0.875rem;
     font-weight: 600;
-    color: #fff;
+    color: var(--color-text, #fff);
     margin-bottom: 0.25rem;
 }
 
 .badge-tooltip p {
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--color-textMuted, rgba(255, 255, 255, 0.6));
     margin-bottom: 0.5rem;
 }
 
@@ -168,9 +168,9 @@
     align-items: center;
     gap: 0.75rem;
     padding: 0.75rem 1rem;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--color-surface, rgba(255, 255, 255, 0.05));
     border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
 }
 
 .streak-counter.active {
@@ -181,7 +181,7 @@
 .streak-icon {
     width: 24px;
     height: 24px;
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--color-textMuted, rgba(255, 255, 255, 0.4));
 }
 
 .streak-icon.burning {

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CheckCircle, AlertCircle, AlertTriangle, Info } from 'lucide-react';
 import './Toast.css';
@@ -14,10 +15,13 @@ const Toast = ({
   duration = 4000,
   position = 'top-right' // 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center' | 'bottom-center'
 }) => {
-  // Auto-dismiss
-  if (duration && isVisible && onClose) {
-    setTimeout(onClose, duration);
-  }
+  // Auto-dismiss using useEffect
+  useEffect(() => {
+    if (duration && isVisible && onClose) {
+      const timer = setTimeout(onClose, duration);
+      return () => clearTimeout(timer);
+    }
+  }, [duration, isVisible, onClose]);
 
   const icons = {
     success: <CheckCircle size={20} />,

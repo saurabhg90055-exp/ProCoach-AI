@@ -163,6 +163,40 @@ class GlobalStats(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class UserXP(Base):
+    """User XP and gamification data"""
+    __tablename__ = "user_xp"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True)
+    total_xp = Column(Integer, default=0)
+    current_level = Column(Integer, default=1)
+    current_streak = Column(Integer, default=0)
+    longest_streak = Column(Integer, default=0)
+    last_activity_date = Column(DateTime, nullable=True)
+    total_interviews = Column(Integer, default=0)
+    total_questions = Column(Integer, default=0)
+    perfect_scores = Column(Integer, default=0)
+    average_score = Column(Float, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class UserAchievement(Base):
+    """User unlocked achievements"""
+    __tablename__ = "user_achievements"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    achievement_id = Column(String(50), nullable=False)
+    unlocked_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Composite unique constraint
+    __table_args__ = (
+        {'extend_existing': True}
+    )
+
+
 # ============== DATABASE UTILITIES ==============
 
 def get_db():
