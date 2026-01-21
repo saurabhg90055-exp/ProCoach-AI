@@ -1226,7 +1226,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete }) => {
                 {renderAuthHeader()}
                 {renderAuthModal()}
                 <div className="setup-card">
-                    <h2>🎯 Setup Your Interview</h2>
+                    <h2>🎯 Setup Your ProCoach AI Interview</h2>
                     
                     {/* Progress Steps */}
                     <div className="setup-progress">

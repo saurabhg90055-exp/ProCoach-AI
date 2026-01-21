@@ -65,10 +65,10 @@ const InterviewSetup = ({
                     whileHover={{ scale: 1.05 }}
                 >
                     <Sparkles className="sparkle-icon" />
-                    <span>AI Interview Coach</span>
+                    <span>ProCoach AI</span>
                 </motion.div>
                 <h1 className="setup-title">
-                    {userName ? `Welcome back, ${userName}!` : 'Start Your Interview'}
+                    {userName ? `Welcome back, ${userName}!` : 'Setup Your Interview'}
                 </h1>
                 <p className="setup-subtitle">
                     Configure your mock interview session and level up your skills

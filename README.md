@@ -1,4 +1,4 @@
-# 🎯 AI Mock Interviewer
+# 🎯 ProCoach AI - Your Personal AI Interview Coach
 
 A full-stack AI-powered mock interview platform that helps you practice and improve your interview skills with real-time feedback, speech analysis, and personalized coaching.
 
@@ -14,6 +14,7 @@ A full-stack AI-powered mock interview platform that helps you practice and impr
 - **AI Interviewer** - Powered by Groq's LLaMA 3.3-70B for intelligent follow-up questions
 - **Text-to-Speech** - Hear questions spoken aloud (Web Speech API)
 - **Multiple topics** - General, Technical, Behavioral, System Design, Case Study, Leadership
+- **Resume Upload (Optional)** - AI tailors questions based on your experience
 
 ### 🏢 Company-Specific Styles
 - **Google** - Algorithmic thinking, complexity analysis

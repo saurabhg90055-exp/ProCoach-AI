@@ -6,17 +6,18 @@ import ConfettiCelebration, { useConfetti } from './components/effects/ConfettiC
 import SettingsPanel from './components/settings/SettingsPanel';
 import { useXPSystem, LevelProgressBar, XPGainPopup, AchievementUnlock } from './components/gamification/XPSystem';
 import Dashboard from './components/dashboard/Dashboard';
+import { LandingPage } from './components/landing';
 import { useKeyboardShortcuts, KeyboardShortcutsHelp } from './hooks/useKeyboardShortcuts.jsx';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider, useToast } from './contexts/ToastContext';
 import { AuthModal } from './components/auth';
-import { Settings, BarChart2, Home, Trophy, Sparkles, LogIn, LogOut, User } from 'lucide-react';
+import { Settings, BarChart2, Home, Trophy, Sparkles, LogIn, LogOut, User, Rocket } from 'lucide-react';
 import './App.css';
 import './components/gamification/XPSystem.css';
 import './components/theme/ThemeProvider.css';
 
 function AppContent() {
-  const [currentView, setCurrentView] = useState('home'); // 'home', 'interview', 'dashboard'
+  const [currentView, setCurrentView] = useState('landing'); // 'landing', 'home', 'interview', 'dashboard'
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -137,18 +138,26 @@ function AppContent() {
         <motion.div 
           className="logo-section"
           whileHover={{ scale: 1.02 }}
+          onClick={() => setCurrentView('landing')}
         >
           <Sparkles className="logo-icon" />
-          <span className="logo-text">AI Interviewer</span>
+          <span className="logo-text">ProCoach AI</span>
         </motion.div>
 
         <nav className="main-nav">
           <button
-            className={`nav-btn ${currentView === 'home' ? 'active' : ''}`}
-            onClick={() => setCurrentView('home')}
+            className={`nav-btn ${currentView === 'landing' ? 'active' : ''}`}
+            onClick={() => setCurrentView('landing')}
           >
             <Home size={18} />
             <span>Home</span>
+          </button>
+          <button
+            className={`nav-btn ${currentView === 'home' ? 'active' : ''}`}
+            onClick={() => setCurrentView('home')}
+          >
+            <Rocket size={18} />
+            <span>Interview</span>
           </button>
           <button
             className={`nav-btn ${currentView === 'dashboard' ? 'active' : ''}`}
@@ -216,8 +225,23 @@ function AppContent() {
       </header>
 
       {/* Main Content */}
-      <main className="app-main">
+      <main className={`app-main ${currentView === 'landing' ? 'landing-main' : ''}`}>
         <AnimatePresence mode="wait">
+          {currentView === 'landing' && (
+            <motion.div
+              key="landing"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="landing-view"
+            >
+              <LandingPage 
+                onStartSetup={() => setCurrentView('home')}
+                stats={displayStats}
+              />
+            </motion.div>
+          )}
+
           {currentView === 'home' && (
             <motion.div
               key="home"
@@ -228,12 +252,12 @@ function AppContent() {
             >
               <div className="welcome-section">
                 <h1 className="main-title">
-                  <span className="gradient-text">Master Your</span>
+                  <span className="gradient-text">Setup Your</span>
                   <br />
-                  <span className="highlight-text">Technical Interviews</span>
+                  <span className="highlight-text">Mock Interview</span>
                 </h1>
                 <p className="main-subtitle">
-                  Practice with AI-powered mock interviews and get instant feedback
+                  Configure your interview session and start practicing with ProCoach AI
                 </p>
               </div>
               <AudioRecorder 
