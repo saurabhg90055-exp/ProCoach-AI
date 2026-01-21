@@ -86,6 +86,23 @@
     cursor: pointer;
 }
 
+.period-select option {
+    background: var(--color-surface, #1a1a2e);
+    color: var(--color-text, #fff);
+}
+
+/* Light theme support */
+[data-theme="light"] .period-select {
+    background: var(--color-surface, #fff);
+    color: var(--color-text, #1a202c);
+    border-color: var(--color-border, #e2e8f0);
+}
+
+[data-theme="light"] .period-select option {
+    background: #fff;
+    color: #1a202c;
+}
+
 /* Level Section */
 .level-section {
     margin-bottom: 2rem;

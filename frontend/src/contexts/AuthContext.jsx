@@ -101,6 +101,8 @@ export const AuthProvider = ({ children }) => {
             setUser(result.data.user);
             setIsAuthenticated(true);
             await Promise.all([fetchDashboard(), fetchSettings()]);
+            // Dispatch event so AudioRecorder syncs auth state
+            window.dispatchEvent(new CustomEvent('auth:login'));
         }
         return result;
     };
@@ -111,6 +113,8 @@ export const AuthProvider = ({ children }) => {
             setUser(result.data.user);
             setIsAuthenticated(true);
             await Promise.all([fetchDashboard(), fetchSettings()]);
+            // Dispatch event so AudioRecorder syncs auth state
+            window.dispatchEvent(new CustomEvent('auth:login'));
         }
         return result;
     };

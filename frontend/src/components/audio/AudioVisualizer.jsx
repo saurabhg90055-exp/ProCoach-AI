@@ -160,21 +160,25 @@ const AudioVisualizer = ({
           const innerX = 100 + Math.cos(point.angle) * baseRadius;
           const innerY = 100 + Math.sin(point.angle) * baseRadius;
           
+          // Ensure coordinates are valid numbers
+          const safeX = isNaN(x) ? innerX : x;
+          const safeY = isNaN(y) ? innerY : y;
+          
           return (
             <motion.line
               key={point.id}
               x1={innerX}
               y1={innerY}
-              x2={x}
-              y2={y}
+              x2={safeX}
+              y2={safeY}
               stroke={`url(#circGradient-${color})`}
               strokeWidth={2}
               strokeLinecap="round"
-              initial={{ opacity: 0.3 }}
+              initial={{ opacity: 0.3, x2: innerX, y2: innerY }}
               animate={{ 
                 opacity: isActive ? 0.8 : 0.3,
-                x2: x,
-                y2: y
+                x2: safeX,
+                y2: safeY
               }}
               transition={{ duration: 0.1 }}
             />

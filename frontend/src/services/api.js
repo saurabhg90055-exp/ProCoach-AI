@@ -255,6 +255,22 @@ export const interviewAPI = {
         return response.json();
     },
     
+    // Save to user's account (requires auth)
+    async saveToUserHistory(sessionId) {
+        const response = await fetchWithAuth(`/user/interviews/save?session_id=${sessionId}`, {
+            method: 'POST'
+        });
+        return response.json();
+    },
+    
+    // Save to local history (no auth required)
+    async saveToLocalHistory(sessionId) {
+        const response = await fetch(`${API_URL}/interview/history/save?session_id=${sessionId}`, {
+            method: 'POST'
+        });
+        return response.json();
+    },
+    
     async getHistory() {
         const response = await fetchWithAuth('/user/interviews');
         if (response.ok) {

@@ -834,7 +834,7 @@ Be constructive, specific, and actionable."""
         "duration_seconds": duration_seconds
     }
     
-    # Update database record
+    # Update database record if exists, or create new one
     db_interview = db.query(Interview).filter(Interview.session_id == session_id).first()
     if db_interview:
         db_interview.scores = scores
@@ -845,6 +845,31 @@ Be constructive, specific, and actionable."""
         db_interview.ended_at = datetime.utcnow()
         db_interview.duration_seconds = duration_seconds
         db_interview.status = "completed"
+        db.commit()
+    else:
+        # Create new interview record (without user_id - will be associated when user saves)
+        db_interview = Interview(
+            session_id=session_id,
+            user_id=None,  # Will be set when user explicitly saves
+            topic=session.get("topic", "general"),
+            topic_name=session.get("topic_name", "General Technical"),
+            company_style=session.get("company_style", "default"),
+            company_name=session.get("company_name", "Standard"),
+            difficulty=session.get("difficulty", "medium"),
+            duration_minutes=session.get("duration_minutes", 30),
+            question_count=session["question_count"],
+            scores=scores,
+            average_score=avg_score,
+            transcript=session["history"],
+            summary=summary,
+            has_resume=bool(session.get("resume_text")),
+            has_job_description=bool(session.get("job_description")),
+            started_at=datetime.fromtimestamp(session.get("start_time", time.time())),
+            ended_at=datetime.utcnow(),
+            duration_seconds=duration_seconds,
+            status="completed"
+        )
+        db.add(db_interview)
         db.commit()
     
     del interview_sessions[session_id]
@@ -1197,7 +1222,7 @@ def get_grade(score: float) -> str:
 
 @app.post("/interview/history/save")
 def save_to_history(session_id: str):
-    """Save completed interview to history"""
+    """Save completed interview to local history (for non-authenticated users)"""
     
     if session_id not in interview_sessions:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -1221,6 +1246,79 @@ def save_to_history(session_id: str):
     interview_history.append(history_entry)
     
     return {"success": True, "history_id": history_entry["id"]}
+
+
+@app.post("/user/interviews/save")
+async def save_interview_to_user_history(
+    session_id: str,
+    current_user: User = Depends(get_current_user_required),
+    db: Session = Depends(get_db)
+):
+    """Save completed interview to authenticated user's history in database"""
+    
+    # First check if interview already exists in database (created during end_interview)
+    existing = db.query(Interview).filter(Interview.session_id == session_id).first()
+    if existing:
+        if existing.user_id == current_user.id:
+            return {"success": True, "message": "Interview already saved", "interview_id": existing.id}
+        elif existing.user_id is None:
+            # Associate orphan interview with user
+            existing.user_id = current_user.id
+            db.commit()
+            return {"success": True, "message": "Interview linked to your account", "interview_id": existing.id}
+        else:
+            # Interview belongs to another user
+            raise HTTPException(status_code=403, detail="Interview belongs to another user")
+    
+    # If not in database, try to get from memory (shouldn't happen after end_interview)
+    if session_id not in interview_sessions:
+        raise HTTPException(status_code=404, detail="Session not found or already ended")
+    
+    session = interview_sessions[session_id]
+    scores = session.get("scores", [])
+    
+    # Create new interview record
+    interview = Interview(
+        session_id=session_id,
+        user_id=current_user.id,
+        topic=session.get("topic", "general"),
+        topic_name=session.get("topic_name", "General Technical"),
+        company_style=session.get("company_style", "default"),
+        company_name=session.get("company_name", "Standard"),
+        difficulty=session.get("difficulty", "medium"),
+        duration_minutes=session.get("duration_minutes", 30),
+        question_count=session.get("question_count", 0),
+        scores=scores,
+        average_score=round(sum(scores) / len(scores), 1) if scores else None,
+        transcript=session.get("conversation", []),
+        has_resume=bool(session.get("resume_text")),
+        has_job_description=bool(session.get("job_description")),
+        started_at=datetime.fromtimestamp(session.get("start_time", time.time())),
+        ended_at=datetime.utcnow(),
+        duration_seconds=int(time.time() - session.get("start_time", time.time())),
+        status="completed"
+    )
+    
+    db.add(interview)
+    db.commit()
+    db.refresh(interview)
+    
+    # Also save individual questions
+    for idx, msg in enumerate(session.get("conversation", [])):
+        if msg.get("role") == "assistant" and "?" in msg.get("content", ""):
+            # This is a question
+            question = InterviewQuestion(
+                interview_id=interview.id,
+                question_number=idx // 2 + 1,
+                question=msg.get("content"),
+                score=scores[idx // 2] if idx // 2 < len(scores) else None,
+                created_at=datetime.utcnow()
+            )
+            db.add(question)
+    
+    db.commit()
+    
+    return {"success": True, "message": "Interview saved successfully", "interview_id": interview.id}
 
 
 @app.get("/interview/history")

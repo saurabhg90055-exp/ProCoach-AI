@@ -169,6 +169,11 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete }) => {
             timerIntervalRef.current = setInterval(async () => {
                 try {
                     const response = await fetch(`${API_URL}/interview/${sessionId}/time`);
+                    if (!response.ok) {
+                        // Session might have ended, stop polling
+                        clearInterval(timerIntervalRef.current);
+                        return;
+                    }
                     const data = await response.json();
                     setElapsedTime(data.elapsed_seconds);
                     setRemainingTime(data.remaining_seconds);
@@ -176,7 +181,8 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete }) => {
 
                     setIsTimeUp(data.is_time_up);
                 } catch (error) {
-                    console.error("Timer error:", error);
+                    // Session ended or network error - silently ignore
+                    clearInterval(timerIntervalRef.current);
                 }
             }, 1000);
             
@@ -381,10 +387,11 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete }) => {
     };
     
     const fetchAiCoaching = async () => {
-        if (!sessionId) return;
+        const coachingSessionId = sessionId || summary?.sessionId;
+        if (!coachingSessionId) return;
         setIsLoadingCoaching(true);
         try {
-            const response = await fetch(`${API_URL}/interview/${sessionId}/ai-coaching`, {
+            const response = await fetch(`${API_URL}/interview/${coachingSessionId}/ai-coaching`, {
                 method: "POST"
             });
             const data = await response.json();
@@ -396,10 +403,11 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete }) => {
     };
     
     const fetchImprovementPlan = async () => {
-        if (!sessionId) return;
+        const planSessionId = sessionId || summary?.sessionId;
+        if (!planSessionId) return;
         setIsLoadingCoaching(true);
         try {
-            const response = await fetch(`${API_URL}/interview/${sessionId}/improvement-plan`);
+            const response = await fetch(`${API_URL}/interview/${planSessionId}/improvement-plan`);
             const data = await response.json();
             setImprovementPlan(data);
         } catch (error) {
@@ -410,22 +418,59 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete }) => {
 
     // ============== PHASE 5: AUTHENTICATION ==============
     
-    // Check auth status on mount
+    // Check auth status on mount and whenever localStorage changes (syncs with AuthContext)
     useEffect(() => {
-        if (authToken) {
-            verifyAuth();
-        }
-    }, []);
+        const checkAndSyncAuth = () => {
+            const token = localStorage.getItem('authToken');
+            if (token !== authToken) {
+                setAuthToken(token);
+            }
+            if (token) {
+                verifyAuth(token);
+            } else {
+                setIsAuthenticated(false);
+                setUser(null);
+            }
+        };
+        
+        checkAndSyncAuth();
+        
+        // Listen for storage changes (when user logs in/out from App.jsx)
+        const handleStorageChange = (e) => {
+            if (e.key === 'authToken') {
+                checkAndSyncAuth();
+            }
+        };
+        
+        // Also listen for custom auth events
+        const handleAuthChange = () => checkAndSyncAuth();
+        
+        window.addEventListener('storage', handleStorageChange);
+        window.addEventListener('auth:login', handleAuthChange);
+        window.addEventListener('auth:logout', handleAuthChange);
+        
+        // Poll for changes every 2 seconds as a fallback
+        const pollInterval = setInterval(checkAndSyncAuth, 2000);
+        
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener('auth:login', handleAuthChange);
+            window.removeEventListener('auth:logout', handleAuthChange);
+            clearInterval(pollInterval);
+        };
+    }, [authToken]);
     
-    const verifyAuth = async () => {
+    const verifyAuth = async (token = authToken) => {
+        if (!token) return;
         try {
             const response = await fetch(`${API_URL}/auth/me`, {
-                headers: { 'Authorization': `Bearer ${authToken}` }
+                headers: { 'Authorization': `Bearer ${token}` }
             });
             if (response.ok) {
                 const data = await response.json();
                 setUser(data);
                 setIsAuthenticated(true);
+                setAuthToken(token);
                 fetchUserStats();
             } else {
                 // Token expired or invalid
@@ -545,15 +590,33 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete }) => {
     };
     
     const getAuthHeaders = () => {
-        return authToken ? { 'Authorization': `Bearer ${authToken}` } : {};
+        // Always get the latest token from localStorage to stay in sync with AuthContext
+        const token = authToken || localStorage.getItem('authToken');
+        return token ? { 'Authorization': `Bearer ${token}` } : {};
     };
 
-    // Phase 4: Export interview report
+    // Auth-aware action handler - shows login prompt for guests
+    const requireAuth = (action, actionName) => {
+        if (!isAuthenticated) {
+            setAuthMode('login');
+            setShowAuthModal(true);
+            showNotification(`Please login to ${actionName}`, 'info');
+            return false;
+        }
+        return true;
+    };
+
+    // Phase 4: Export interview report (available for all, but saved data requires auth)
     const exportReport = async () => {
-        if (!sessionId) return;
+        const exportSessionId = sessionId || summary?.sessionId;
+        if (!exportSessionId) {
+            showNotification('No interview to export', 'error');
+            return;
+        }
         try {
-            const response = await fetch(`${API_URL}/interview/${sessionId}/export`, {
-                method: "POST"
+            const response = await fetch(`${API_URL}/interview/${exportSessionId}/export`, {
+                method: "POST",
+                headers: getAuthHeaders()
             });
             const data = await response.json();
             
@@ -562,11 +625,81 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete }) => {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `interview-report-${sessionId.slice(0, 8)}.json`;
+            a.download = `interview-report-${exportSessionId.slice(0, 8)}.json`;
             a.click();
             URL.revokeObjectURL(url);
+            showNotification('Report exported successfully!', 'success');
         } catch (error) {
             console.error("Error exporting report:", error);
+            showNotification('Failed to export report', 'error');
+        }
+    };
+
+    // Save to history - requires authentication
+    const handleSaveToHistory = async () => {
+        if (!requireAuth(() => {}, 'save interview history')) return;
+        
+        // Use current sessionId or fall back to sessionId stored in summary
+        const saveSessionId = sessionId || summary?.sessionId;
+        if (!saveSessionId) {
+            showNotification('No interview session to save', 'error');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`${API_URL}/user/interviews/save?session_id=${saveSessionId}`, {
+                method: "POST",
+                headers: {
+                    ...getAuthHeaders(),
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                showNotification(data.message || 'Interview saved to your history!', 'success');
+                fetchInterviewHistory();
+            } else {
+                const error = await response.json();
+                showNotification(error.detail || 'Failed to save', 'error');
+            }
+        } catch (error) {
+            console.error("Error saving to history:", error);
+            showNotification('Failed to save interview', 'error');
+        }
+    };
+
+    // Get AI Coaching - requires authentication
+    const handleGetAiCoaching = async () => {
+        if (!requireAuth(() => {}, 'get AI coaching')) return;
+        fetchAiCoaching();
+        fetchImprovementPlan();
+    };
+
+    // Share results - requires authentication
+    const handleShareResults = async () => {
+        if (!requireAuth(() => {}, 'share results')) return;
+        
+        // Create shareable text
+        const shareText = `I just completed a ${selectedDifficulty} ${selectedTopic} interview on ProCoach AI and scored ${summary?.scores?.average || averageScore}/10! 🎯`;
+        
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: 'My ProCoach AI Interview Results',
+                    text: shareText,
+                    url: window.location.origin
+                });
+                showNotification('Shared successfully!', 'success');
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    console.error('Share failed:', error);
+                }
+            }
+        } else {
+            // Fallback: copy to clipboard
+            navigator.clipboard.writeText(shareText);
+            showNotification('Results copied to clipboard!', 'success');
         }
     };
 
@@ -662,16 +795,21 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete }) => {
         // Play session end sound
         if (soundEnabled) soundEffects.play('sessionEnd');
         
+        // Store session ID before ending so we can save to history later
+        const completedSessionId = sessionId;
+        
         try {
             const response = await fetch(`${API_URL}/interview/${sessionId}/end`, {
                 method: "POST"
             });
             const data = await response.json();
             
-            setSummary(data);
+            // Include session ID in summary for save-to-history functionality
+            setSummary({ ...data, sessionId: completedSessionId });
             setShowSummary(true);
             setInterviewStarted(false);
-            setSessionId(null);
+            // Don't clear sessionId yet - keep it for save-to-history
+            // setSessionId(null);
             setAvatarState('happy');
             
             // Notify parent component about interview completion for XP tracking
@@ -1085,14 +1223,17 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete }) => {
                     </div>
 
                     <div className="summary-actions">
-                        <button onClick={() => { fetchAiCoaching(); fetchImprovementPlan(); }} className="btn btn-secondary">
+                        <button onClick={handleGetAiCoaching} className="btn btn-secondary">
                             🎯 Get AI Coaching
                         </button>
                         <button onClick={exportReport} className="btn btn-secondary">
                             📥 Export Report
                         </button>
-                        <button onClick={saveToHistory} className="btn btn-secondary">
+                        <button onClick={handleSaveToHistory} className="btn btn-secondary">
                             💾 Save to History
+                        </button>
+                        <button onClick={handleShareResults} className="btn btn-secondary">
+                            📤 Share Results
                         </button>
                         <button onClick={resetInterview} className="btn btn-primary">
                             🔄 Start New Interview

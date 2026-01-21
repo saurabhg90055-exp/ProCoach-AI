@@ -160,9 +160,26 @@
 }
 
 .form-select option {
-    background: #1a1a2e;
-    color: #fff;
+    background: var(--color-surface, #1a1a2e);
+    color: var(--color-text, #fff);
     padding: 0.5rem;
+}
+
+/* Light theme support for dropdowns */
+[data-theme="light"] .form-select {
+    background: var(--color-surface, #fff);
+    border-color: var(--color-border, #e2e8f0);
+    color: var(--color-text, #1a202c);
+}
+
+[data-theme="light"] .form-select option {
+    background: #fff;
+    color: #1a202c;
+}
+
+[data-theme="light"] .form-select:hover,
+[data-theme="light"] .form-select:focus {
+    border-color: var(--color-primary, #6366f1);
 }
 
 /* Company Grid */

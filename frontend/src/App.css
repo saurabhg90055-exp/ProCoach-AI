@@ -28,6 +28,11 @@
   position: sticky;
   top: 0;
   z-index: 100;
+  width: 100%;
+  box-sizing: border-box;
+  height: 72px;
+  min-height: 72px;
+  max-height: 72px;
 }
 
 .logo-section {
@@ -302,8 +307,11 @@
 @media (max-width: 768px) {
   .app-header {
     flex-direction: column;
-    gap: 1rem;
-    padding: 1rem;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    height: auto;
+    min-height: 72px;
+    max-height: none;
   }
 
   .main-nav {
@@ -2815,15 +2823,35 @@
 /* Form inputs */
 .topic-select,
 .jd-textarea,
-.auth-modal input {
+.auth-modal input,
+select,
+.form-select {
   color: var(--color-text, #fff);
   background: var(--color-surface, rgba(255, 255, 255, 0.05));
   border-color: var(--color-border, rgba(255, 255, 255, 0.2));
 }
 
-.topic-select option {
+.topic-select option,
+select option,
+.form-select option {
   background: var(--color-surface, #1a1a2e);
   color: var(--color-text, #fff);
+}
+
+/* Light theme dropdown overrides */
+[data-theme="light"] .topic-select,
+[data-theme="light"] select,
+[data-theme="light"] .form-select {
+  background: var(--color-surface, #fff);
+  color: var(--color-text, #1a202c);
+  border-color: var(--color-border, #e2e8f0);
+}
+
+[data-theme="light"] .topic-select option,
+[data-theme="light"] select option,
+[data-theme="light"] .form-select option {
+  background: #fff;
+  color: #1a202c;
 }
 
 /* Summary and content texts */
