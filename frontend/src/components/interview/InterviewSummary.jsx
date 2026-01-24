@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
     TrendingUp, Target, Clock, Award, CheckCircle, XCircle, 
-    ChevronRight, RotateCcw, Download, Share2, Sparkles 
+    ChevronRight, RotateCcw, Download, Share2, Sparkles, LogIn, Save 
 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { interviewAPI } from '../../services/api';
 import './InterviewSummary.css';
 
 const InterviewSummary = ({
@@ -17,8 +19,14 @@ const InterviewSummary = ({
     xpGained,
     onRestart,
     onViewDetails,
-    questionsHistory
+    questionsHistory,
+    sessionId,
+    isGuest = false,
+    onRequireAuth
 }) => {
+    const { isAuthenticated } = useAuth();
+    const [saveStatus, setSaveStatus] = useState(null); // null, 'saving', 'saved', 'error'
+    
     const containerVariants = {
         hidden: { opacity: 0 },
         visible: {
@@ -182,6 +190,40 @@ const InterviewSummary = ({
 
             {/* Action Buttons */}
             <motion.div className="summary-actions" variants={itemVariants}>
+                {/* Save to History - always show, prompt login if not authenticated */}
+                <motion.button
+                    className="action-btn secondary highlight"
+                    onClick={() => {
+                        if (!isAuthenticated) {
+                            onRequireAuth?.('save');
+                        } else {
+                            handleSaveToHistory();
+                        }
+                    }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    disabled={saveStatus === 'saving' || saveStatus === 'saved'}
+                >
+                    {!isAuthenticated ? (
+                        <>
+                            <LogIn size={20} />
+                            <span>Login to Save</span>
+                        </>
+                    ) : saveStatus === 'saving' ? (
+                        <span>Saving...</span>
+                    ) : saveStatus === 'saved' ? (
+                        <>
+                            <CheckCircle size={20} />
+                            <span>Saved!</span>
+                        </>
+                    ) : (
+                        <>
+                            <Save size={20} />
+                            <span>Save to History</span>
+                        </>
+                    )}
+                </motion.button>
+
                 <motion.button
                     className="action-btn primary"
                     onClick={onRestart}
@@ -189,27 +231,96 @@ const InterviewSummary = ({
                     whileTap={{ scale: 0.98 }}
                 >
                     <RotateCcw size={20} />
-                    <span>New Interview</span>
+                    <span>Start New Interview</span>
                 </motion.button>
+                
                 <motion.button
                     className="action-btn secondary"
+                    onClick={() => {
+                        if (!isAuthenticated) {
+                            onRequireAuth?.('export');
+                        } else {
+                            handleExportReport();
+                        }
+                    }}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                 >
+                    {!isAuthenticated && <LogIn size={16} style={{ marginRight: 4 }} />}
                     <Download size={20} />
                     <span>Export Report</span>
                 </motion.button>
+                
                 <motion.button
                     className="action-btn secondary"
+                    onClick={() => {
+                        if (!isAuthenticated) {
+                            onRequireAuth?.('share');
+                        } else {
+                            handleShare();
+                        }
+                    }}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                 >
+                    {!isAuthenticated && <LogIn size={16} style={{ marginRight: 4 }} />}
                     <Share2 size={20} />
                     <span>Share</span>
                 </motion.button>
             </motion.div>
+            
+            {/* Guest Notice */}
+            {isGuest && !isAuthenticated && (
+                <motion.div className="guest-notice" variants={itemVariants}>
+                    <p>
+                        <LogIn size={16} />
+                        <span>Login or create an account to save your interview history and track progress across sessions.</span>
+                    </p>
+                </motion.div>
+            )}
         </motion.div>
     );
+    
+    // Handler functions
+    async function handleSaveToHistory() {
+        if (!sessionId) return;
+        setSaveStatus('saving');
+        try {
+            const result = await interviewAPI.saveToUserHistory(sessionId);
+            if (result.success) {
+                setSaveStatus('saved');
+            } else {
+                setSaveStatus('error');
+            }
+        } catch (error) {
+            console.error('Error saving to history:', error);
+            setSaveStatus('error');
+        }
+    }
+    
+    async function handleExportReport() {
+        if (!sessionId) return;
+        try {
+            const result = await interviewAPI.exportReport(sessionId);
+            // Download as JSON file
+            const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `interview-report-${sessionId.slice(0, 8)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Error exporting report:', error);
+        }
+    }
+    
+    function handleShare() {
+        // For now, copy a summary to clipboard
+        const shareText = `I just completed a ${topic} interview on ProCoach AI!\n\nScore: ${score}%\nDifficulty: ${difficulty}\nQuestions: ${totalQuestions}\n\nTry it out at procoach.ai`;
+        navigator.clipboard.writeText(shareText);
+        alert('Results copied to clipboard!');
+    }
 };
 
 export default InterviewSummary;

@@ -49,6 +49,12 @@
     transition: all 0.3s ease;
 }
 
+.settings-header .close-btn svg {
+    width: 20px;
+    height: 20px;
+    color: inherit;
+}
+
 .settings-header .close-btn:hover {
     background: var(--color-surfaceHover, rgba(255, 255, 255, 0.1));
     color: var(--color-text, #fff);
@@ -76,6 +82,12 @@
     cursor: pointer;
     transition: all 0.3s ease;
     white-space: nowrap;
+}
+
+.tab-btn svg {
+    width: 18px;
+    height: 18px;
+    color: inherit;
 }
 
 .tab-btn:hover {

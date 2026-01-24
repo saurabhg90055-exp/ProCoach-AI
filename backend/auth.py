@@ -1,6 +1,6 @@
 """
 Authentication utilities for AI Interviewer
-Phase 5: Backend Architecture
+MongoDB-based authentication with JWT tokens
 """
 
 import os
@@ -9,11 +9,10 @@ from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
+from fastapi import Depends, HTTPException, status, Request
+from fastapi.security import OAuth2PasswordBearer
 
-from database import get_db, User, UserSettings
+from database import get_user_by_email, get_user_by_username, get_user_by_id, create_user_db
 
 # ============== CONFIGURATION ==============
 
@@ -39,7 +38,7 @@ class UserCreate(BaseModel):
 
 
 class UserResponse(BaseModel):
-    id: int
+    id: str
     email: str
     username: str
     full_name: Optional[str]
@@ -64,7 +63,7 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
-    user_id: Optional[int] = None
+    user_id: Optional[str] = None
     email: Optional[str] = None
 
 
@@ -114,7 +113,7 @@ def verify_token(token: str, token_type: str = "access") -> Optional[TokenData]:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         if payload.get("type") != token_type:
             return None
-        user_id: int = payload.get("sub")
+        user_id: str = payload.get("sub")
         email: str = payload.get("email")
         if user_id is None:
             return None
@@ -123,60 +122,37 @@ def verify_token(token: str, token_type: str = "access") -> Optional[TokenData]:
         return None
 
 
-# ============== USER UTILITIES ==============
+# ============== USER UTILITIES (ASYNC FOR MONGODB) ==============
 
-def get_user_by_email(db: Session, email: str) -> Optional[User]:
-    """Get user by email"""
-    return db.query(User).filter(User.email == email).first()
-
-
-def get_user_by_username(db: Session, username: str) -> Optional[User]:
-    """Get user by username"""
-    return db.query(User).filter(User.username == username).first()
-
-
-def get_user_by_id(db: Session, user_id: int) -> Optional[User]:
-    """Get user by ID"""
-    return db.query(User).filter(User.id == user_id).first()
-
-
-def create_user(db: Session, user: UserCreate) -> User:
-    """Create a new user"""
+async def create_user(user: UserCreate) -> dict:
+    """Create a new user in MongoDB"""
     hashed_password = get_password_hash(user.password)
-    db_user = User(
-        email=user.email,
-        username=user.username,
-        hashed_password=hashed_password,
-        full_name=user.full_name
-    )
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    
-    # Create default settings for user
-    settings = UserSettings(user_id=db_user.id)
-    db.add(settings)
-    db.commit()
-    
-    return db_user
+    user_data = {
+        "email": user.email,
+        "username": user.username,
+        "hashed_password": hashed_password,
+        "full_name": user.full_name,
+        "is_active": True,
+        "is_premium": False
+    }
+    return await create_user_db(user_data)
 
 
-def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
+async def authenticate_user(email: str, password: str) -> Optional[dict]:
     """Authenticate user with email and password"""
-    user = get_user_by_email(db, email)
+    user = await get_user_by_email(email)
     if not user:
         return None
-    if not verify_password(password, user.hashed_password):
+    if not verify_password(password, user.get("hashed_password", "")):
         return None
     return user
 
 
-# ============== DEPENDENCY FUNCTIONS ==============
+# ============== DEPENDENCY FUNCTIONS (ASYNC) ==============
 
 async def get_current_user(
-    token: Optional[str] = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
-) -> Optional[User]:
+    token: Optional[str] = Depends(oauth2_scheme)
+) -> Optional[dict]:
     """Get current authenticated user (optional - returns None if not authenticated)"""
     if not token:
         return None
@@ -185,17 +161,16 @@ async def get_current_user(
     if not token_data:
         return None
     
-    user = get_user_by_id(db, token_data.user_id)
-    if not user or not user.is_active:
+    user = await get_user_by_id(token_data.user_id)
+    if not user or not user.get("is_active", False):
         return None
     
     return user
 
 
 async def get_current_user_required(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
-) -> User:
+    token: str = Depends(oauth2_scheme)
+) -> dict:
     """Get current authenticated user (required - raises error if not authenticated)"""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -210,23 +185,36 @@ async def get_current_user_required(
     if not token_data:
         raise credentials_exception
     
-    user = get_user_by_id(db, token_data.user_id)
+    user = await get_user_by_id(token_data.user_id)
     if not user:
         raise credentials_exception
     
-    if not user.is_active:
+    if not user.get("is_active", False):
         raise HTTPException(status_code=400, detail="Inactive user")
     
     return user
 
 
 async def get_premium_user(
-    user: User = Depends(get_current_user_required)
-) -> User:
+    user: dict = Depends(get_current_user_required)
+) -> dict:
     """Require premium user access"""
-    if not user.is_premium:
+    if not user.get("is_premium", False):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Premium subscription required"
         )
     return user
+
+
+def user_to_response(user: dict) -> UserResponse:
+    """Convert MongoDB user document to UserResponse"""
+    return UserResponse(
+        id=user.get("_id", ""),
+        email=user.get("email", ""),
+        username=user.get("username", ""),
+        full_name=user.get("full_name"),
+        is_active=user.get("is_active", True),
+        is_premium=user.get("is_premium", False),
+        created_at=user.get("created_at", datetime.utcnow())
+    )

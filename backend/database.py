@@ -1,225 +1,414 @@
 """
-Database configuration and models for AI Interviewer
-Phase 5: Backend Architecture
+MongoDB Database configuration for AI Interviewer
+Switched from SQLAlchemy to MongoDB for scalable document storage
 """
 
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Text, Boolean, ForeignKey, JSON
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
-from datetime import datetime
 import os
+from datetime import datetime
+from typing import Optional, List, Dict, Any
+from bson import ObjectId
+from motor.motor_asyncio import AsyncIOMotorClient
+from pydantic import BaseModel, Field
+from dotenv import load_dotenv
 
-# Database URL - SQLite for development, PostgreSQL for production
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./ai_interviewer.db")
+# Load environment variables
+load_dotenv()
 
-# Create engine
-if DATABASE_URL.startswith("sqlite"):
-    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-else:
-    engine = create_engine(DATABASE_URL)
+# MongoDB connection
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+DATABASE_NAME = "ai_interviewer"
 
-# Create session factory
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# Base class for models
-Base = declarative_base()
-
-
-# ============== DATABASE MODELS ==============
-
-class User(Base):
-    """User account model"""
-    __tablename__ = "users"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String(255), unique=True, index=True, nullable=False)
-    username = Column(String(100), unique=True, index=True, nullable=False)
-    hashed_password = Column(String(255), nullable=False)
-    full_name = Column(String(255), nullable=True)
-    is_active = Column(Boolean, default=True)
-    is_premium = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Relationships
-    interviews = relationship("Interview", back_populates="user")
-    settings = relationship("UserSettings", back_populates="user", uselist=False)
+# Global database client
+client: Optional[AsyncIOMotorClient] = None
+db = None
 
 
-class UserSettings(Base):
-    """User preferences and settings"""
-    __tablename__ = "user_settings"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), unique=True)
-    preferred_topic = Column(String(50), default="general")
-    preferred_company = Column(String(50), default="default")
-    preferred_difficulty = Column(String(20), default="medium")
-    preferred_duration = Column(Integer, default=30)
-    enable_tts = Column(Boolean, default=True)
-    theme = Column(String(20), default="dark")
-    
-    # Relationships
-    user = relationship("User", back_populates="settings")
+# ============== HELPER FOR OBJECTID ==============
+
+def str_to_objectid(id_str: str) -> Optional[ObjectId]:
+    """Safely convert string to ObjectId"""
+    try:
+        return ObjectId(id_str)
+    except:
+        return None
 
 
-class Interview(Base):
-    """Interview session record"""
-    __tablename__ = "interviews"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    session_id = Column(String(36), unique=True, index=True, nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Nullable for guest users
-    
-    # Interview configuration
-    topic = Column(String(50), nullable=False)
-    topic_name = Column(String(100))
-    company_style = Column(String(50))
-    company_name = Column(String(100))
-    difficulty = Column(String(20))
-    duration_minutes = Column(Integer, default=30)
-    
-    # Interview data
-    question_count = Column(Integer, default=0)
-    scores = Column(JSON, default=list)  # List of scores
-    average_score = Column(Float, nullable=True)
-    transcript = Column(JSON, default=list)  # Full conversation history
-    
-    # Metadata
-    has_resume = Column(Boolean, default=False)
-    has_job_description = Column(Boolean, default=False)
-    resume_summary = Column(Text, nullable=True)
-    job_description_summary = Column(Text, nullable=True)
-    
-    # AI-generated feedback
-    summary = Column(Text, nullable=True)
-    strengths = Column(JSON, default=list)
-    improvements = Column(JSON, default=list)
-    
-    # Timestamps
-    started_at = Column(DateTime, default=datetime.utcnow)
-    ended_at = Column(DateTime, nullable=True)
-    duration_seconds = Column(Integer, nullable=True)
-    
-    # Status
-    status = Column(String(20), default="active")  # active, completed, abandoned
-    
-    # Relationships
-    user = relationship("User", back_populates="interviews")
-    questions = relationship("InterviewQuestion", back_populates="interview")
+def serialize_doc(doc: dict) -> dict:
+    """Convert MongoDB document to JSON-serializable format"""
+    if doc is None:
+        return None
+    if "_id" in doc:
+        doc["_id"] = str(doc["_id"])
+    if "user_id" in doc and doc["user_id"] and isinstance(doc["user_id"], ObjectId):
+        doc["user_id"] = str(doc["user_id"])
+    return doc
 
 
-class InterviewQuestion(Base):
-    """Individual question-answer pairs with feedback"""
-    __tablename__ = "interview_questions"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    interview_id = Column(Integer, ForeignKey("interviews.id"))
-    question_number = Column(Integer)
-    
-    # Q&A content
-    question = Column(Text, nullable=False)
-    answer = Column(Text, nullable=True)
-    
-    # Scoring
-    score = Column(Integer, nullable=True)
-    category = Column(String(20), nullable=True)  # excellent, good, needs_improvement, poor
-    
-    # AI feedback
-    feedback = Column(Text, nullable=True)
-    better_answer = Column(Text, nullable=True)
-    
-    # Metadata
-    response_time_seconds = Column(Integer, nullable=True)
-    word_count = Column(Integer, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    
-    # Relationships
-    interview = relationship("Interview", back_populates="questions")
+# ============== DATABASE CONNECTION ==============
+
+async def connect_to_mongo():
+    """Connect to MongoDB"""
+    global client, db
+    try:
+        client = AsyncIOMotorClient(MONGO_URI)
+        db = client[DATABASE_NAME]
+        
+        # Test the connection
+        await client.admin.command('ping')
+        print(f"✅ Connected to MongoDB: {DATABASE_NAME}")
+        
+        # Create indexes for better performance
+        await create_indexes()
+        
+        return db
+    except Exception as e:
+        print(f"❌ MongoDB connection failed: {e}")
+        raise e
 
 
-class APIUsage(Base):
-    """Track API usage for rate limiting and analytics"""
-    __tablename__ = "api_usage"
+async def close_mongo_connection():
+    """Close MongoDB connection"""
+    global client
+    if client:
+        client.close()
+        print("🔌 MongoDB connection closed")
+
+
+async def create_indexes():
+    """Create database indexes for better query performance"""
+    global db
+    if db is None:
+        return
     
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    ip_address = Column(String(45))  # IPv6 compatible
-    endpoint = Column(String(100))
-    method = Column(String(10))
-    status_code = Column(Integer)
-    response_time_ms = Column(Integer)
-    tokens_used = Column(Integer, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-
-class GlobalStats(Base):
-    """Global platform statistics"""
-    __tablename__ = "global_stats"
+    # User indexes
+    await db.users.create_index("email", unique=True)
+    await db.users.create_index("username", unique=True)
     
-    id = Column(Integer, primary_key=True, index=True)
-    stat_key = Column(String(50), unique=True, index=True)
-    stat_value = Column(String(255))
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-
-class UserXP(Base):
-    """User XP and gamification data"""
-    __tablename__ = "user_xp"
+    # Interview indexes
+    await db.interviews.create_index("session_id", unique=True)
+    await db.interviews.create_index("user_id")
+    await db.interviews.create_index("started_at")
     
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), unique=True)
-    total_xp = Column(Integer, default=0)
-    current_level = Column(Integer, default=1)
-    current_streak = Column(Integer, default=0)
-    longest_streak = Column(Integer, default=0)
-    last_activity_date = Column(DateTime, nullable=True)
-    total_interviews = Column(Integer, default=0)
-    total_questions = Column(Integer, default=0)
-    perfect_scores = Column(Integer, default=0)
-    average_score = Column(Float, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    # API usage indexes
+    await db.api_usage.create_index("user_id")
+    await db.api_usage.create_index("created_at")
+    
+    # Global stats indexes
+    await db.global_stats.create_index("stat_key", unique=True)
+    
+    print("📊 Database indexes created")
 
 
-class UserAchievement(Base):
-    """User unlocked achievements"""
-    __tablename__ = "user_achievements"
+def get_database():
+    """Get database instance"""
+    global db
+    return db
+
+
+# ============== USER CRUD OPERATIONS ==============
+
+async def create_user_db(user_data: dict) -> dict:
+    """Create a new user"""
+    user_data["created_at"] = datetime.utcnow()
+    user_data["updated_at"] = datetime.utcnow()
     
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    achievement_id = Column(String(50), nullable=False)
-    unlocked_at = Column(DateTime, default=datetime.utcnow)
+    # Default settings and XP data
+    if "settings" not in user_data:
+        user_data["settings"] = {
+            "preferred_topic": "general",
+            "preferred_company": "default",
+            "preferred_difficulty": "medium",
+            "preferred_duration": 30,
+            "enable_tts": True,
+            "theme": "dark"
+        }
     
-    # Composite unique constraint
-    __table_args__ = (
-        {'extend_existing': True}
+    if "xp_data" not in user_data:
+        user_data["xp_data"] = {
+            "total_xp": 0,
+            "current_level": 1,
+            "current_streak": 0,
+            "longest_streak": 0,
+            "last_activity_date": None,
+            "total_interviews": 0,
+            "total_questions": 0,
+            "perfect_scores": 0,
+            "average_score": 0
+        }
+    
+    if "achievements" not in user_data:
+        user_data["achievements"] = []
+    
+    result = await db.users.insert_one(user_data)
+    user_data["_id"] = str(result.inserted_id)
+    return user_data
+
+
+async def get_user_by_email(email: str) -> Optional[dict]:
+    """Get user by email"""
+    user = await db.users.find_one({"email": email})
+    return serialize_doc(user)
+
+
+async def get_user_by_username(username: str) -> Optional[dict]:
+    """Get user by username"""
+    user = await db.users.find_one({"username": username})
+    return serialize_doc(user)
+
+
+async def get_user_by_id(user_id: str) -> Optional[dict]:
+    """Get user by ID"""
+    try:
+        user = await db.users.find_one({"_id": ObjectId(user_id)})
+        return serialize_doc(user)
+    except:
+        return None
+
+
+async def update_user(user_id: str, update_data: dict) -> Optional[dict]:
+    """Update user data"""
+    update_data["updated_at"] = datetime.utcnow()
+    result = await db.users.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": update_data}
+    )
+    if result.modified_count > 0 or result.matched_count > 0:
+        return await get_user_by_id(user_id)
+    return None
+
+
+async def update_user_xp(user_id: str, xp_data: dict) -> Optional[dict]:
+    """Update user XP data"""
+    return await update_user(user_id, {"xp_data": xp_data})
+
+
+async def add_user_achievement(user_id: str, achievement_id: str) -> bool:
+    """Add achievement to user"""
+    result = await db.users.update_one(
+        {"_id": ObjectId(user_id)},
+        {
+            "$addToSet": {
+                "achievements": {
+                    "achievement_id": achievement_id,
+                    "unlocked_at": datetime.utcnow()
+                }
+            },
+            "$set": {"updated_at": datetime.utcnow()}
+        }
+    )
+    return result.modified_count > 0
+
+
+async def update_user_settings(user_id: str, settings: dict) -> Optional[dict]:
+    """Update user settings"""
+    return await update_user(user_id, {"settings": settings})
+
+
+# ============== INTERVIEW CRUD OPERATIONS ==============
+
+async def create_interview_db(interview_data: dict) -> dict:
+    """Create a new interview session"""
+    interview_data["started_at"] = datetime.utcnow()
+    if "questions" not in interview_data:
+        interview_data["questions"] = []
+    if "scores" not in interview_data:
+        interview_data["scores"] = []
+    if "transcript" not in interview_data:
+        interview_data["transcript"] = []
+    if "strengths" not in interview_data:
+        interview_data["strengths"] = []
+    if "improvements" not in interview_data:
+        interview_data["improvements"] = []
+    
+    result = await db.interviews.insert_one(interview_data)
+    interview_data["_id"] = str(result.inserted_id)
+    return interview_data
+
+
+async def get_interview_by_session_id(session_id: str) -> Optional[dict]:
+    """Get interview by session ID"""
+    interview = await db.interviews.find_one({"session_id": session_id})
+    return serialize_doc(interview)
+
+
+async def get_interview_by_id(interview_id: str) -> Optional[dict]:
+    """Get interview by ID"""
+    try:
+        interview = await db.interviews.find_one({"_id": ObjectId(interview_id)})
+        return serialize_doc(interview)
+    except:
+        return None
+
+
+async def update_interview(session_id: str, update_data: dict) -> Optional[dict]:
+    """Update interview data"""
+    result = await db.interviews.update_one(
+        {"session_id": session_id},
+        {"$set": update_data}
+    )
+    if result.modified_count > 0 or result.matched_count > 0:
+        return await get_interview_by_session_id(session_id)
+    return None
+
+
+async def add_interview_question(session_id: str, question_data: dict) -> bool:
+    """Add a question to an interview"""
+    result = await db.interviews.update_one(
+        {"session_id": session_id},
+        {
+            "$push": {"questions": question_data},
+            "$inc": {"question_count": 1}
+        }
+    )
+    return result.modified_count > 0
+
+
+async def add_interview_score(session_id: str, score: int) -> bool:
+    """Add a score to an interview"""
+    result = await db.interviews.update_one(
+        {"session_id": session_id},
+        {"$push": {"scores": score}}
+    )
+    return result.modified_count > 0
+
+
+async def add_transcript_message(session_id: str, message: dict) -> bool:
+    """Add a message to interview transcript"""
+    result = await db.interviews.update_one(
+        {"session_id": session_id},
+        {"$push": {"transcript": message}}
+    )
+    return result.modified_count > 0
+
+
+async def get_user_interviews(user_id: str, limit: int = 50, skip: int = 0) -> List[dict]:
+    """Get all interviews for a user"""
+    cursor = db.interviews.find({"user_id": user_id}).sort("started_at", -1).skip(skip).limit(limit)
+    interviews = []
+    async for interview in cursor:
+        interviews.append(serialize_doc(interview))
+    return interviews
+
+
+async def delete_interview(interview_id: str, user_id: str) -> bool:
+    """Delete an interview (only if owned by user)"""
+    result = await db.interviews.delete_one({
+        "_id": ObjectId(interview_id),
+        "user_id": user_id
+    })
+    return result.deleted_count > 0
+
+
+async def save_interview_to_user(session_id: str, user_id: str) -> Optional[dict]:
+    """Assign a guest interview to a user account"""
+    result = await db.interviews.update_one(
+        {"session_id": session_id},
+        {"$set": {"user_id": user_id}}
+    )
+    if result.modified_count > 0 or result.matched_count > 0:
+        return await get_interview_by_session_id(session_id)
+    return None
+
+
+# ============== STATS/ANALYTICS OPERATIONS ==============
+
+async def get_user_stats(user_id: str) -> dict:
+    """Get aggregated stats for a user"""
+    pipeline = [
+        {"$match": {"user_id": user_id, "status": "completed"}},
+        {"$group": {
+            "_id": "$user_id",
+            "total_interviews": {"$sum": 1},
+            "total_questions": {"$sum": "$question_count"},
+            "all_scores": {"$push": "$scores"},
+            "topics_practiced": {"$addToSet": "$topic"}
+        }}
+    ]
+    
+    cursor = db.interviews.aggregate(pipeline)
+    results = await cursor.to_list(length=1)
+    
+    if results:
+        result = results[0]
+        # Flatten scores
+        all_scores = []
+        for scores in result.get("all_scores", []):
+            if scores:
+                all_scores.extend(scores)
+        
+        avg_score = sum(all_scores) / len(all_scores) if all_scores else 0
+        perfect_scores = sum(1 for s in all_scores if s >= 9)
+        
+        return {
+            "total_interviews": result.get("total_interviews", 0),
+            "total_questions": result.get("total_questions", 0),
+            "average_score": round(avg_score, 1),
+            "perfect_scores": perfect_scores,
+            "topics_practiced": result.get("topics_practiced", [])
+        }
+    
+    return {
+        "total_interviews": 0,
+        "total_questions": 0,
+        "average_score": 0,
+        "perfect_scores": 0,
+        "topics_practiced": []
+    }
+
+
+async def get_global_stat(key: str) -> Optional[str]:
+    """Get a global statistic value"""
+    stat = await db.global_stats.find_one({"stat_key": key})
+    return stat.get("stat_value") if stat else None
+
+
+async def set_global_stat(key: str, value: str):
+    """Set a global statistic value"""
+    await db.global_stats.update_one(
+        {"stat_key": key},
+        {
+            "$set": {
+                "stat_value": value,
+                "updated_at": datetime.utcnow()
+            }
+        },
+        upsert=True
     )
 
 
-# ============== DATABASE UTILITIES ==============
+# ============== API USAGE TRACKING ==============
 
-def get_db():
-    """Dependency to get database session"""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+async def log_api_usage(usage_data: dict):
+    """Log API usage for analytics"""
+    usage_data["created_at"] = datetime.utcnow()
+    await db.api_usage.insert_one(usage_data)
 
 
-def init_db():
-    """Initialize database tables"""
-    Base.metadata.create_all(bind=engine)
-    print("✅ Database tables created successfully!")
+# ============== INITIALIZATION ==============
+
+async def init_db():
+    """Initialize database connection"""
+    await connect_to_mongo()
 
 
-def reset_db():
+async def reset_db():
     """Reset database (for development only)"""
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-    print("🔄 Database reset successfully!")
+    global db
+    if db:
+        await db.users.drop()
+        await db.interviews.drop()
+        await db.api_usage.drop()
+        await db.global_stats.drop()
+        await create_indexes()
+        print("🔄 Database reset successfully!")
+
+
+# For backwards compatibility
+def get_db():
+    """Returns database instance (for dependency injection compatibility)"""
+    return db
 
 
 if __name__ == "__main__":
-    init_db()
+    import asyncio
+    asyncio.run(init_db())

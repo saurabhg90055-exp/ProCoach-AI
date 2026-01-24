@@ -10,7 +10,7 @@ import soundEffects from "./utils/soundEffects";
 // API URL - use environment variable or default to localhost
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
-const AudioRecorder = ({ settings = {}, onInterviewComplete }) => {
+const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) => {
     // Auth state (Phase 5)
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [user, setUser] = useState(null);
@@ -1223,22 +1223,51 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete }) => {
                     </div>
 
                     <div className="summary-actions">
+                        <button onClick={resetInterview} className="btn btn-primary">
+                            🔄 Start New Interview
+                        </button>
+                        
+                        {/* Guest user notice and save button */}
+                        {summary.is_guest && !isAuthenticated && (
+                            <button 
+                                onClick={() => {
+                                    if (onRequireAuth) {
+                                        onRequireAuth();
+                                    } else {
+                                        setAuthMode('login');
+                                        setShowAuthModal(true);
+                                    }
+                                }}
+                                className="btn btn-highlight"
+                            >
+                                🔐 Login to Save Progress
+                            </button>
+                        )}
+                        
+                        {isAuthenticated && (
+                            <button onClick={handleSaveToHistory} className="btn btn-secondary">
+                                💾 Save to History
+                            </button>
+                        )}
+                        
                         <button onClick={handleGetAiCoaching} className="btn btn-secondary">
                             🎯 Get AI Coaching
                         </button>
                         <button onClick={exportReport} className="btn btn-secondary">
                             📥 Export Report
                         </button>
-                        <button onClick={handleSaveToHistory} className="btn btn-secondary">
-                            💾 Save to History
-                        </button>
                         <button onClick={handleShareResults} className="btn btn-secondary">
                             📤 Share Results
                         </button>
-                        <button onClick={resetInterview} className="btn btn-primary">
-                            🔄 Start New Interview
-                        </button>
                     </div>
+                    
+                    {/* Guest notice */}
+                    {summary.is_guest && !isAuthenticated && (
+                        <div className="guest-notice-banner">
+                            <p>⚠️ You are using ProCoach AI as a guest. Your interview data will not be saved.</p>
+                            <p>Create an account or login to save your history, track progress, and unlock achievements!</p>
+                        </div>
+                    )}
                     
                     {/* AI Coaching Results */}
                     {(aiCoaching || improvementPlan) && (

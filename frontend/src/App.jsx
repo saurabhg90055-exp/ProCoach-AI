@@ -263,6 +263,7 @@ function AppContent() {
               <AudioRecorder 
                 settings={settings}
                 onInterviewComplete={handleInterviewComplete}
+                onRequireAuth={() => openAuthModal('login')}
               />
             </motion.div>
           )}

@@ -290,6 +290,7 @@
     display: flex;
     gap: 1rem;
     flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .action-btn {
@@ -305,6 +306,13 @@
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
+}
+
+.action-btn svg {
+    width: 20px;
+    height: 20px;
+    color: inherit;
+    flex-shrink: 0;
 }
 
 .action-btn.primary {
@@ -326,6 +334,46 @@
 .action-btn.secondary:hover {
     background: rgba(255, 255, 255, 0.1);
     border-color: rgba(255, 255, 255, 0.3);
+}
+
+.action-btn.secondary.highlight {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(16, 185, 129, 0.2));
+    border-color: rgba(34, 197, 94, 0.5);
+    color: #22c55e;
+}
+
+.action-btn.secondary.highlight:hover {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(16, 185, 129, 0.3));
+}
+
+.action-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Guest Notice */
+.guest-notice {
+    margin-top: 2rem;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 12px;
+    text-align: center;
+}
+
+.guest-notice p {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.guest-notice svg {
+    color: #6366f1;
+    flex-shrink: 0;
 }
 
 /* Responsive */
