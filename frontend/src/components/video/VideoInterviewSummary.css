@@ -38,11 +38,22 @@
     margin-bottom: 1rem;
 }
 
+.summary-header .header-badge svg {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    min-height: 20px;
+    flex-shrink: 0;
+}
+
 .summary-header .header-icon {
-    color: #fbbf24;
+    color: #fbe924;
     width: 48px;
     height: 48px;
+    min-width: 48px;
+    min-height: 48px;
     margin-bottom: 1rem;
+    display: inline-block;
 }
 
 .summary-header h1 {
@@ -55,7 +66,7 @@
 }
 
 .summary-header p {
-    color: var(--text-secondary, #666);
+    color: var(--text-secondary, #008bfc);
     font-size: 1.1rem;
     margin: 0;
 }
@@ -64,7 +75,7 @@
 .summary-tabs {
     display: flex;
     gap: 0.5rem;
-    background: var(--bg-secondary, #f5f5f5);
+    background: var(--bg-secondary, #020404);
     padding: 0.5rem;
     border-radius: 12px;
     margin-bottom: 2rem;
@@ -85,6 +96,14 @@
     color: var(--text-secondary, #666);
     cursor: pointer;
     transition: all 0.2s ease;
+}
+
+.tab-btn svg {
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    min-height: 18px;
+    flex-shrink: 0;
 }
 
 .tab-btn:hover {
@@ -130,7 +149,7 @@
 }
 
 .score-bg {
-    stroke: var(--bg-secondary, #e5e5e5);
+    stroke: var(--bg-secondary, #f90202);
 }
 
 .score-progress {
@@ -143,18 +162,25 @@
     left: 50%;
     transform: translate(-50%, -50%);
     text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 }
 
 .score-value {
-    font-size: 3rem;
+    font-size: 2.5rem;
     font-weight: 700;
+    line-height: 1;
     color: var(--score-color);
     line-height: 1;
 }
 
 .score-label {
-    font-size: 0.9rem;
-    color: var(--text-secondary, #666);
+    font-size: 0.65rem;
+    color: var(--text-secondary, #f8cf00);
+    margin-top: 0.25rem;
+    white-space: nowrap;
 }
 
 .score-grade {
@@ -182,6 +208,10 @@
 .breakdown-item svg {
     color: #8b5cf6;
     flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    min-height: 20px;
 }
 
 .breakdown-details {
@@ -239,6 +269,9 @@
     color: #f59e0b;
     width: 24px;
     height: 24px;
+    min-width: 24px;
+    min-height: 24px;
+    flex-shrink: 0;
 }
 
 .xp-amount {
@@ -272,8 +305,14 @@
 .stat-icon {
     width: 40px;
     height: 40px;
+    min-width: 40px;
+    min-height: 40px;
     padding: 8px;
     border-radius: 10px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .stat-icon.success {
@@ -315,12 +354,24 @@
 /* Expression Metrics */
 .expression-metrics {
     margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: var(--card-bg, #002e48);
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--border-color, #e5e5e5);
 }
 
 .expression-metrics h3 {
     margin: 0 0 1.5rem;
     font-size: 1.25rem;
     color: var(--text-primary, #333);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.expression-metrics h3::before {
+    content: '👤';
 }
 
 .metric-cards {
@@ -331,9 +382,9 @@
 
 .metric-card {
     padding: 1.5rem;
-    background: var(--card-bg, #fff);
+    background: var(--bg-secondary, #46a2ff);
     border-radius: 16px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
     border: 1px solid var(--border-color, #e5e5e5);
 }
 
@@ -346,6 +397,11 @@
 
 .metric-header svg {
     color: #8b5cf6;
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    min-height: 24px;
+    flex-shrink: 0;
 }
 
 .metric-header span {
@@ -376,9 +432,10 @@
 
 .metric-tip {
     font-size: 0.85rem;
-    color: var(--text-secondary, #666);
+    color: var(--text-secondary, #ffffff);
     line-height: 1.5;
     margin: 0;
+    font-family: 'Courier New', Courier, monospace;
 }
 
 /* Emotion Distribution */
@@ -560,6 +617,10 @@
     flex: 1;
     font-size: 0.9rem;
     color: var(--text-primary, #333);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .history-meta {
@@ -580,6 +641,9 @@
 .history-icon {
     width: 20px;
     height: 20px;
+    min-width: 20px;
+    min-height: 20px;
+    flex-shrink: 0;
 }
 
 .history-icon.correct {
@@ -596,6 +660,8 @@
     flex-wrap: wrap;
     gap: 1rem;
     margin-top: 2rem;
+    justify-content: center;
+    align-items: stretch;
 }
 
 .action-btn {
@@ -610,6 +676,17 @@
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
+    flex: 1;
+    min-width: 160px;
+    height: 48px;
+}
+
+.action-btn svg {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    min-height: 20px;
+    flex-shrink: 0;
 }
 
 .action-btn.primary {
@@ -625,7 +702,7 @@
 }
 
 .action-btn.secondary {
-    background: var(--card-bg, #fff);
+    background: linear-gradient(135deg, #667eea, #764ba2);
     color: var(--text-primary, #333);
     border: 1px solid var(--border-color, #e5e5e5);
 }
@@ -636,7 +713,7 @@
 
 .action-btn.secondary.highlight {
     border-color: #8b5cf6;
-    color: #8b5cf6;
+    color: white;
 }
 
 .action-btn.secondary.highlight:hover {
@@ -666,6 +743,14 @@
     color: #3b82f6;
 }
 
+.guest-notice svg {
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    min-height: 16px;
+    flex-shrink: 0;
+}
+
 /* Dark Mode */
 [data-theme="dark"] .summary-header h1 {
     background: linear-gradient(135deg, #a78bfa, #c084fc);
@@ -685,9 +770,23 @@
 [data-theme="dark"] .metric-card,
 [data-theme="dark"] .feedback-content,
 [data-theme="dark"] .trend-chart,
-[data-theme="dark"] .history-item {
+[data-theme="dark"] .history-item,
+[data-theme="dark"] .expression-metrics {
     background: #2d2d3a;
     border-color: #3d3d4a;
+}
+
+[data-theme="dark"] .expression-metrics h3,
+[data-theme="dark"] .metric-header span,
+[data-theme="dark"] .metric-value,
+[data-theme="dark"] .history-question,
+[data-theme="dark"] .emotion-name,
+[data-theme="dark"] .emotion-percentage {
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .metric-tip {
+    color: #a0a0a0;
 }
 
 [data-theme="dark"] .action-btn.secondary {
@@ -712,6 +811,7 @@
     
     .summary-tabs {
         flex-direction: column;
+        background-color: #ffffff;
     }
     
     .score-section {

@@ -891,6 +891,30 @@ Be constructive, specific, and actionable."""
             "duration_seconds": duration_seconds,
             "status": "completed"
         })
+    else:
+        # Save guest interview to DB without user_id so it can be claimed later
+        interview_data = {
+            "session_id": session_id,
+            "user_id": None,  # Will be linked when user saves to history
+            "topic": session.get("topic", "general"),
+            "topic_name": session.get("topic_name", "General Technical"),
+            "company_style": session.get("company_style", "default"),
+            "company_name": session.get("company_name", "Standard"),
+            "difficulty": session.get("difficulty", "medium"),
+            "duration_minutes": session.get("duration_minutes", 30),
+            "question_count": session.get("question_count", 0),
+            "scores": scores,
+            "average_score": avg_score,
+            "transcript": session.get("history", []),
+            "summary": summary,
+            "has_resume": bool(session.get("resume_text")),
+            "has_job_description": bool(session.get("job_description")),
+            "started_at": datetime.fromtimestamp(session.get("start_time", time.time())),
+            "ended_at": datetime.utcnow(),
+            "duration_seconds": duration_seconds,
+            "status": "completed"
+        }
+        await create_interview_db(interview_data)
     
     del interview_sessions[session_id]
     
