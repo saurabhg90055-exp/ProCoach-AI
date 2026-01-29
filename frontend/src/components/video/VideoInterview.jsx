@@ -4,13 +4,21 @@ import {
     Camera, CameraOff, Mic, MicOff, Video, VideoOff, 
     Phone, Settings, Maximize2, Minimize2, Eye, 
     AlertCircle, CheckCircle, TrendingUp, Brain,
-    MessageSquare, Clock, Zap
+    MessageSquare, Clock, Zap, Monitor, Subtitles, Download
 } from 'lucide-react';
 import { AIAvatar } from '../avatar';
 import { AudioVisualizer } from '../audio';
 import { TypingIndicator } from '../ui';
 import ExpressionIndicator from './ExpressionIndicator';
 import VideoCoachingTips from './VideoCoachingTips';
+import CameraControls from './CameraControls';
+import NetworkQuality from './NetworkQuality';
+import ScreenShare from './ScreenShare';
+import RecordingDownload from './RecordingDownload';
+import LiveCaptions from './LiveCaptions';
+import LanguageSelector from './LanguageSelector';
+import useFaceDetection from '../../hooks/useFaceDetection';
+import useVideoRecording from '../../hooks/useVideoRecording';
 import './VideoInterview.css';
 
 const VideoInterview = ({
@@ -41,6 +49,7 @@ const VideoInterview = ({
     const [isRecording, setIsRecording] = useState(false);
     const [recordingTime, setRecordingTime] = useState(0);
     const [audioLevel, setAudioLevel] = useState(0);
+    const [savedRecordings, setSavedRecordings] = useState([]);
     
     // Expression analysis states
     const [expressionData, setExpressionData] = useState({
@@ -54,6 +63,12 @@ const VideoInterview = ({
     // UI states
     const [showSettings, setShowSettings] = useState(false);
     const [showTranscript, setShowTranscript] = useState(true);
+    const [showCameraControls, setShowCameraControls] = useState(false);
+    const [showCaptions, setShowCaptions] = useState(false);
+    const [interviewLanguage, setInterviewLanguage] = useState('en-US');
+    const [networkQuality, setNetworkQuality] = useState(null);
+    const [isScreenSharing, setIsScreenSharing] = useState(false);
+    const [screenStream, setScreenStream] = useState(null);
     
     // Refs
     const videoRef = useRef(null);
@@ -63,6 +78,36 @@ const VideoInterview = ({
     const audioContextRef = useRef(null);
     const analyserRef = useRef(null);
     const containerRef = useRef(null);
+    
+    // Custom hooks for enhanced features
+    const { 
+        expressionData: faceExpressionData, 
+        faceDetected, 
+        isModelLoaded,
+        isLoading: isModelLoading 
+    } = useFaceDetection(videoRef, isCameraOn, {
+        onExpressionUpdate: (data) => {
+            setExpressionData(data);
+            setExpressionHistory(prev => [...prev.slice(-100), { ...data, timestamp: Date.now() }]);
+        }
+    });
+    
+    const {
+        isRecording: isVideoRecording,
+        recordingDuration,
+        recordingBlob,
+        recordingUrl,
+        startRecording: startVideoRecording,
+        stopRecording: stopVideoRecording,
+        downloadRecording
+    } = useVideoRecording({
+        onRecordingComplete: (data) => {
+            setSavedRecordings(prev => [...prev, {
+                ...data,
+                timestamp: Date.now()
+            }]);
+        }
+    });
     
     // Initialize camera and microphone
     useEffect(() => {
@@ -125,6 +170,9 @@ const VideoInterview = ({
         if (stream) {
             stream.getTracks().forEach(track => track.stop());
         }
+        if (screenStream) {
+            screenStream.getTracks().forEach(track => track.stop());
+        }
         if (audioContextRef.current) {
             audioContextRef.current.close();
         }
@@ -160,14 +208,70 @@ const VideoInterview = ({
         }
     };
     
+    // Handle stream update from camera controls
+    const handleStreamUpdate = (newStream) => {
+        setStream(newStream);
+        if (videoRef.current) {
+            videoRef.current.srcObject = newStream;
+        }
+        setupAudioAnalyzer(newStream);
+    };
+    
     // Recording functions
     const startRecording = async () => {
-        if (!stream || !isMicOn) return;
+        console.log('startRecording called', { stream: !!stream, isMicOn });
+        
+        if (!stream) {
+            console.error('No media stream available. Trying to initialize...');
+            await initializeMedia();
+            return;
+        }
+        
+        // Auto-enable mic if muted
+        if (!isMicOn && stream) {
+            const audioTrack = stream.getAudioTracks()[0];
+            if (audioTrack) {
+                audioTrack.enabled = true;
+                setIsMicOn(true);
+            }
+        }
         
         try {
             chunksRef.current = [];
-            mediaRecorderRef.current = new MediaRecorder(stream, {
-                mimeType: 'audio/webm;codecs=opus'
+            
+            // Get only audio track for the audio recorder
+            const audioTrack = stream.getAudioTracks()[0];
+            if (!audioTrack) {
+                console.error('No audio track available');
+                return;
+            }
+            
+            // Create audio-only stream for recording
+            const audioStream = new MediaStream([audioTrack]);
+            
+            // Check supported mime types
+            const mimeTypes = [
+                'audio/webm;codecs=opus',
+                'audio/webm',
+                'audio/ogg;codecs=opus',
+                'audio/mp4'
+            ];
+            
+            let selectedMimeType = '';
+            for (const mimeType of mimeTypes) {
+                if (MediaRecorder.isTypeSupported(mimeType)) {
+                    selectedMimeType = mimeType;
+                    break;
+                }
+            }
+            
+            if (!selectedMimeType) {
+                console.error('No supported audio mime type found');
+                return;
+            }
+            
+            mediaRecorderRef.current = new MediaRecorder(audioStream, {
+                mimeType: selectedMimeType
             });
             
             mediaRecorderRef.current.ondataavailable = (event) => {
@@ -177,7 +281,7 @@ const VideoInterview = ({
             };
             
             mediaRecorderRef.current.onstop = async () => {
-                const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+                const audioBlob = new Blob(chunksRef.current, { type: selectedMimeType });
                 
                 // Capture current expression data with the recording
                 const capturedExpression = { ...expressionData };
@@ -192,6 +296,15 @@ const VideoInterview = ({
             setIsRecording(true);
             setRecordingTime(0);
             
+            // Also start video recording for replay (optional, don't fail if it errors)
+            if (stream && startVideoRecording) {
+                try {
+                    startVideoRecording(stream, true);
+                } catch (videoRecErr) {
+                    console.warn('Video recording not available:', videoRecErr);
+                }
+            }
+            
             recordingTimerRef.current = setInterval(() => {
                 setRecordingTime(prev => prev + 1);
             }, 1000);
@@ -205,7 +318,53 @@ const VideoInterview = ({
             mediaRecorderRef.current.stop();
             setIsRecording(false);
             clearInterval(recordingTimerRef.current);
+            
+            // Stop video recording too (if available)
+            if (stopVideoRecording) {
+                try {
+                    stopVideoRecording();
+                } catch (e) {
+                    console.warn('Error stopping video recording:', e);
+                }
+            }
         }
+    };
+    
+    // Screen sharing handlers
+    const handleScreenShareStart = (screenStream, type) => {
+        setScreenStream(screenStream);
+        setIsScreenSharing(true);
+    };
+    
+    const handleScreenShareEnd = () => {
+        setScreenStream(null);
+        setIsScreenSharing(false);
+    };
+    
+    // Network quality handler
+    const handleNetworkQualityChange = (quality) => {
+        setNetworkQuality(quality);
+    };
+    
+    // Caption transcript handler
+    const handleCaptionTranscript = (transcript) => {
+        // Could be used to save transcripts or send to analytics
+        console.log('Caption:', transcript);
+    };
+    
+    // Delete recording
+    const handleDeleteRecording = (index) => {
+        setSavedRecordings(prev => prev.filter((_, i) => i !== index));
+    };
+    
+    // Clear all recordings
+    const handleClearAllRecordings = () => {
+        savedRecordings.forEach(rec => {
+            if (rec.url) {
+                URL.revokeObjectURL(rec.url);
+            }
+        });
+        setSavedRecordings([]);
     };
     
     // Expression data handler (called from ExpressionIndicator)
@@ -233,6 +392,13 @@ const VideoInterview = ({
                         <span>Video Interview</span>
                         <span className="question-badge">Q{questionCount}</span>
                     </div>
+                    
+                    {/* Language Selector */}
+                    <LanguageSelector
+                        value={interviewLanguage}
+                        onChange={setInterviewLanguage}
+                        compact
+                    />
                 </div>
                 
                 <div className="header-center">
@@ -240,6 +406,14 @@ const VideoInterview = ({
                         <Clock size={16} />
                         <span>{formatTime(remainingTime)}</span>
                     </div>
+                    
+                    {/* Network Quality Indicator */}
+                    <NetworkQuality
+                        stream={stream}
+                        onQualityChange={handleNetworkQualityChange}
+                        compact
+                        position="inline"
+                    />
                 </div>
                 
                 <div className="header-right">
@@ -268,7 +442,7 @@ const VideoInterview = ({
                             state={avatarState}
                             audioLevel={isSpeaking ? 0.5 : 0}
                             score={currentScore}
-                            size="large"
+                            size="medium"
                             userExpression={expressionData}
                             videoMode={true}
                             showFeedback={!isRecording && !isProcessing && !isSpeaking}
@@ -302,7 +476,7 @@ const VideoInterview = ({
                     
                     {isProcessing && (
                         <div className="processing-indicator">
-                            <TypingIndicator variant="dots" color="primary" text="AI is analyzing..." />
+                            <TypingIndicator variant="dots" color="primary" text="Analyzing..." />
                         </div>
                     )}
                     
@@ -361,13 +535,36 @@ const VideoInterview = ({
                             )}
                         </AnimatePresence>
                         
+                        {/* Face Detection Status */}
+                        {isModelLoading && (
+                            <div className="model-loading-indicator">
+                                Loading face detection...
+                            </div>
+                        )}
+                        
                         {/* Expression Overlay */}
                         {isCameraOn && (
                             <ExpressionIndicator 
                                 videoRef={videoRef}
                                 isActive={isCameraOn}
                                 onExpressionUpdate={handleExpressionUpdate}
+                                useRealDetection={isModelLoaded}
+                                faceDetected={faceDetected}
                             />
+                        )}
+                        
+                        {/* Screen Share Preview (Picture-in-Picture style) */}
+                        {isScreenSharing && screenStream && (
+                            <div className="screen-share-pip">
+                                <video
+                                    autoPlay
+                                    playsInline
+                                    muted
+                                    ref={(el) => {
+                                        if (el) el.srcObject = screenStream;
+                                    }}
+                                />
+                            </div>
                         )}
                     </div>
                     
@@ -455,6 +652,24 @@ const VideoInterview = ({
                 </button>
             )}
             
+            {/* Live Captions */}
+            <LiveCaptions
+                isActive={showCaptions}
+                language={interviewLanguage}
+                onTranscript={handleCaptionTranscript}
+                position="bottom"
+                showControls={false}
+            />
+            
+            {/* Camera Controls Panel */}
+            <CameraControls
+                stream={stream}
+                videoRef={videoRef}
+                onStreamUpdate={handleStreamUpdate}
+                isOpen={showCameraControls}
+                onClose={() => setShowCameraControls(false)}
+            />
+            
             {/* Control Bar */}
             <div className="video-controls">
                 <div className="controls-left">
@@ -472,14 +687,29 @@ const VideoInterview = ({
                     >
                         {isCameraOn ? <Video size={20} /> : <VideoOff size={20} />}
                     </button>
+                    <button 
+                        className={`control-btn ${showCameraControls ? 'active' : ''}`}
+                        onClick={() => setShowCameraControls(!showCameraControls)}
+                        title="Camera settings"
+                    >
+                        <Settings size={20} />
+                    </button>
                 </div>
                 
                 <div className="controls-center">
+                    {/* Screen Share */}
+                    <ScreenShare
+                        onScreenShareStart={handleScreenShareStart}
+                        onScreenShareEnd={handleScreenShareEnd}
+                        isInterviewActive={true}
+                        showPreview={false}
+                    />
+                    
                     {/* Main Record Button */}
                     <motion.button
                         className={`record-btn ${isRecording ? 'recording' : ''}`}
                         onClick={isRecording ? stopRecording : startRecording}
-                        disabled={isProcessing || isSpeaking || !isMicOn}
+                        disabled={isProcessing || isSpeaking}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                     >
@@ -497,6 +727,15 @@ const VideoInterview = ({
                         )}
                     </motion.button>
                     
+                    {/* Captions Toggle */}
+                    <button
+                        className={`control-btn ${showCaptions ? 'active' : ''}`}
+                        onClick={() => setShowCaptions(!showCaptions)}
+                        title={showCaptions ? 'Hide Captions' : 'Show Captions'}
+                    >
+                        <Subtitles size={20} />
+                    </button>
+                    
                     {/* Audio Level Indicator */}
                     {isRecording && (
                         <div className="audio-level-bar">
@@ -509,6 +748,17 @@ const VideoInterview = ({
                 </div>
                 
                 <div className="controls-right">
+                    {/* Recording Download */}
+                    {savedRecordings.length > 0 && (
+                        <RecordingDownload
+                            recordings={savedRecordings}
+                            onDelete={handleDeleteRecording}
+                            onClearAll={handleClearAllRecordings}
+                            sessionId={sessionId}
+                            interviewTitle="Video Interview"
+                        />
+                    )}
+                    
                     <button 
                         className="control-btn end-call"
                         onClick={onEndInterview}
