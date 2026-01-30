@@ -275,7 +275,11 @@ export const interviewAPI = {
         const response = await fetchWithAuth(`/user/interviews/save?session_id=${sessionId}`, {
             method: 'POST'
         });
-        return response.json();
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.detail || `Failed to save interview: ${response.status}`);
+        }
+        return data;
     },
     
     // Save to local history (no auth required)
