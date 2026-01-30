@@ -1,6 +1,7 @@
 /**
  * Authentication Context and Hook
  * Manages user authentication state across the application
+ * Enhanced with better token persistence and cross-component sync
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
@@ -16,8 +17,9 @@ export const AuthProvider = ({ children }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [dashboardData, setDashboardData] = useState(null);
     const [serverSettings, setServerSettings] = useState(null);
+    const [pendingInterviewToSave, setPendingInterviewToSave] = useState(null);
     
-    // Check authentication status on mount
+    // Check authentication status on mount and listen for auth events
     useEffect(() => {
         checkAuth();
         
@@ -29,8 +31,31 @@ export const AuthProvider = ({ children }) => {
             setServerSettings(null);
         };
         
+        // Listen for login events (from other components like AudioRecorder)
+        const handleExternalLogin = async () => {
+            await checkAuth();
+        };
+        
+        // Listen for storage changes (for multi-tab sync)
+        const handleStorageChange = (e) => {
+            if (e.key === 'authToken') {
+                if (e.newValue) {
+                    checkAuth();
+                } else {
+                    handleLogout();
+                }
+            }
+        };
+        
         window.addEventListener('auth:logout', handleLogout);
-        return () => window.removeEventListener('auth:logout', handleLogout);
+        window.addEventListener('auth:login', handleExternalLogin);
+        window.addEventListener('storage', handleStorageChange);
+        
+        return () => {
+            window.removeEventListener('auth:logout', handleLogout);
+            window.removeEventListener('auth:login', handleExternalLogin);
+            window.removeEventListener('storage', handleStorageChange);
+        };
     }, []);
     
     const checkAuth = async () => {
@@ -49,10 +74,14 @@ export const AuthProvider = ({ children }) => {
                 await Promise.all([fetchDashboard(), fetchSettings()]);
             } else {
                 localStorage.removeItem('authToken');
+                setIsAuthenticated(false);
+                setUser(null);
             }
         } catch (error) {
             console.error('Auth check failed:', error);
             localStorage.removeItem('authToken');
+            setIsAuthenticated(false);
+            setUser(null);
         }
         
         setIsLoading(false);

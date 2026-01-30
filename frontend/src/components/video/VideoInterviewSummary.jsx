@@ -634,13 +634,24 @@ const VideoInterviewSummary = ({
                 </motion.button>
             </motion.div>
             
-            {/* Guest Notice */}
+            {/* Guest Notice - Enhanced with login prompt */}
             {isGuest && !isAuthenticated && (
-                <motion.div className="guest-notice" variants={itemVariants}>
-                    <p>
-                        <LogIn size={16} />
-                        <span>Login or create an account to save your video interview history and track progress.</span>
-                    </p>
+                <motion.div className="guest-notice enhanced" variants={itemVariants}>
+                    <div className="guest-notice-content">
+                        <LogIn size={20} />
+                        <div className="guest-notice-text">
+                            <strong>Save Your Progress!</strong>
+                            <span>Login or create an account to save your video interview history and track your improvement over time.</span>
+                        </div>
+                    </div>
+                    <motion.button 
+                        className="guest-login-btn"
+                        onClick={() => onRequireAuth && onRequireAuth(sessionId)}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                    >
+                        Login to Save
+                    </motion.button>
                 </motion.div>
             )}
         </motion.div>
@@ -648,7 +659,19 @@ const VideoInterviewSummary = ({
     
     // Handler functions
     async function handleSaveToHistory() {
-        if (!sessionId) return;
+        if (!sessionId) {
+            setSaveStatus('error');
+            return;
+        }
+        
+        // If not authenticated, trigger auth flow with session ID for auto-save
+        if (!isAuthenticated) {
+            if (onRequireAuth) {
+                onRequireAuth(sessionId);
+            }
+            return;
+        }
+        
         setSaveStatus('saving');
         try {
             const result = await interviewAPI.saveToUserHistory(sessionId);

@@ -754,6 +754,76 @@
     flex-shrink: 0;
 }
 
+/* Enhanced Guest Notice */
+.guest-notice.enhanced {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 16px;
+}
+
+.guest-notice-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.guest-notice-content > svg {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    min-height: 24px;
+    color: #6366f1;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.guest-notice-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.guest-notice-text strong {
+    font-size: 1rem;
+    color: #6366f1;
+}
+
+.guest-notice-text span {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.5;
+}
+
+.guest-login-btn {
+    align-self: flex-start;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.guest-login-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+}
+
+/* Light theme support */
+[data-theme="light"] .guest-notice-text span {
+    color: rgba(0, 0, 0, 0.6);
+}
+
 /* Dark Mode */
 [data-theme="dark"] .summary-header h1 {
     background: linear-gradient(135deg, #a78bfa, #c084fc);

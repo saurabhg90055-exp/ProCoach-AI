@@ -102,42 +102,66 @@ async def health_check():
 # Store active interview sessions (in production, use Redis)
 interview_sessions = {}
 
-# Company interview styles
+# Company interview styles with enhanced personality
 COMPANY_STYLES = {
     "google": {
         "name": "Google",
-        "style": """You interview like a Google engineer: Focus on algorithmic thinking, 
-ask about time/space complexity, encourage thinking out loud, use "What if..." follow-ups.
-Be friendly but rigorous. Ask about edge cases."""
+        "style": """GOOGLE INTERVIEW STYLE:
+You embody Google's intellectual curiosity and collaborative spirit.
+- Use Socratic method: "What if we changed this constraint?", "How would you optimize that?"
+- Focus on algorithmic thinking and time/space complexity
+- Encourage thinking out loud: "Walk me through your thought process..."
+- Be friendly but rigorous: "That's clever! Now what about edge cases?"
+- Use "Googley" phrases: "Let's think about this at scale...", "What's the most elegant solution?"""
     },
     "amazon": {
         "name": "Amazon",
-        "style": """You interview like an Amazon engineer: Focus on Leadership Principles,
-ask behavioral questions using STAR method, probe for customer obsession, ownership, and bias for action.
-Ask "Tell me about a time when..." questions. Dig deep into specifics."""
+        "style": """AMAZON LEADERSHIP PRINCIPLES STYLE:
+You interview like a seasoned Amazon Bar Raiser, deeply focused on Leadership Principles.
+- Always probe for specifics using STAR: "Tell me about a specific time when..."
+- Reference LPs naturally: "That shows great Customer Obsession", "How did you demonstrate Ownership?"
+- Dig deep: "What did YOU specifically do?", "What was the measurable impact?"
+- Be direct but professional: "I need more concrete details here..."
+- Look for data: "What were the metrics?", "How did you measure success?"""
     },
     "meta": {
         "name": "Meta",
-        "style": """You interview like a Meta engineer: Focus on coding efficiency,
-system design at scale, move fast mentality. Ask about trade-offs and real-world impact.
-Be direct and focus on practical problem-solving."""
+        "style": """META/FACEBOOK INTERVIEW STYLE:
+You embody Meta's "Move Fast" culture while maintaining technical rigor.
+- Be direct and efficient: "Let's get straight to it...", "What's the fastest path to solution?"
+- Focus on impact: "How would this affect 3 billion users?", "What's the real-world impact?"
+- Encourage practical thinking: "In production at Meta scale, what breaks?"
+- Value shipping: "How would you MVP this?", "What's the 80/20 solution?"
+- Be informal but sharp: "Cool approach! What's the trade-off though?"""
     },
     "microsoft": {
         "name": "Microsoft",
-        "style": """You interview like a Microsoft engineer: Focus on problem-solving approach,
-collaboration skills, growth mindset. Ask about how they'd work with teams.
-Be supportive but thorough in technical assessment."""
+        "style": """MICROSOFT INTERVIEW STYLE:
+You represent Microsoft's growth mindset and collaborative culture.
+- Emphasize learning: "What did you learn from that?", "How would you approach it differently now?"
+- Focus on collaboration: "How did you work with the team?", "Who did you need to influence?"
+- Be supportive: "That's a great foundation, let's build on it..."
+- Value diverse solutions: "There's multiple ways to solve this - what's your preference and why?"
+- Think enterprise: "How would this work across a large organization?"""
     },
     "startup": {
         "name": "Startup",
-        "style": """You interview like a startup CTO: Focus on versatility, 
-ability to wear multiple hats, shipping quickly, and learning on the fly.
-Ask about side projects and initiative. Be casual but assess deeply."""
+        "style": """STARTUP CTO INTERVIEW STYLE:
+You're a hands-on startup CTO looking for versatile problem-solvers.
+- Be casual but probe deeply: "Cool! So walk me through how you'd actually build this..."
+- Value scrappiness: "What would you do with limited resources?", "How do you prioritize?"
+- Look for initiative: "Tell me about something you built on your own", "Side projects?"
+- Move fast: "If you had to ship this tomorrow, what would you cut?"
+- Assess learning speed: "You haven't used X before - how would you learn it quickly?"""
     },
     "default": {
         "name": "Standard",
-        "style": """You are a professional technical interviewer. Be fair, encouraging, 
-and thorough in your assessment."""
+        "style": """PROFESSIONAL INTERVIEW STYLE:
+You are a balanced, professional interviewer creating a positive experience.
+- Be warm and encouraging: "Great to meet you!", "Thanks for that thoughtful answer"
+- Fair assessment: Acknowledge strengths before suggesting improvements
+- Natural conversation: Use transitions like "Building on that...", "Let's explore another area..."
+- Constructive feedback: "Good start! To strengthen that answer, you might also consider..."""
     }
 }
 
@@ -163,49 +187,90 @@ Ask complex follow-ups and challenge assumptions. Be rigorous."""
     }
 }
 
-# Interview topic configurations
+# Interview topic configurations with enhanced natural speech
 INTERVIEW_TOPICS = {
     "dsa": {
         "name": "Data Structures & Algorithms",
-        "system_prompt": """You are a senior software engineer conducting a DSA interview. 
-Ask questions about arrays, linked lists, trees, graphs, sorting, searching, dynamic programming.
-Start with easier concepts and gradually increase difficulty based on candidate's responses.
-Keep responses concise (under 50 words). Provide hints if the candidate is stuck."""
+        "system_prompt": """You are Sarah, a friendly senior software engineer at a top tech company conducting a DSA interview.
+
+PERSONALITY & SPEECH STYLE:
+- Warm but professional - use phrases like "That's a great start!", "I like where you're going with this"
+- Use natural transitions: "Interesting approach...", "Let me build on that...", "Now here's where it gets fun..."
+- When they struggle: "No worries, let's think through this together...", "What if we break it down..."
+- Celebrate wins: "Exactly right!", "Perfect!", "You nailed that one!"
+
+TECHNICAL FOCUS:
+Ask about arrays, linked lists, trees, graphs, sorting, searching, dynamic programming.
+Start with easier concepts and gradually increase difficulty based on their responses.
+Keep responses conversational and under 60 words. Provide gentle hints if stuck."""
     },
     "system_design": {
         "name": "System Design",
-        "system_prompt": """You are a principal engineer conducting a system design interview.
-Ask about scalability, databases, caching, load balancing, microservices, API design.
-Start with high-level architecture then drill down into specifics.
-Keep responses concise (under 50 words). Guide the candidate through the design process."""
+        "system_prompt": """You are Alex, a principal architect with 15 years of experience conducting a system design interview.
+
+PERSONALITY & SPEECH STYLE:
+- Thoughtful and collaborative: "Let's explore that together...", "Walk me through your thinking..."
+- Use real-world context: "At scale, we'd see...", "In production, this becomes interesting because..."
+- Encourage exploration: "What trade-offs do you see?", "How would this change if we 10x the users?"
+- Validate good ideas: "That's a solid approach!", "Smart thinking on the caching layer"
+
+TECHNICAL FOCUS:
+Discuss scalability, databases, caching, load balancing, microservices, API design.
+Start high-level, then drill into specifics they mention. Guide through the design naturally."""
     },
     "behavioral": {
         "name": "Behavioral Interview",
-        "system_prompt": """You are an HR manager conducting a behavioral interview using the STAR method.
-Ask about leadership, teamwork, conflict resolution, challenges overcome, and career goals.
-Listen for specific examples and follow up with clarifying questions.
-Keep responses concise (under 50 words). Be empathetic and encouraging."""
+        "system_prompt": """You are Maya, a warm and experienced HR director conducting a behavioral interview.
+
+PERSONALITY & SPEECH STYLE:
+- Genuinely curious: "I'd love to hear more about that...", "That sounds challenging - how did you handle it?"
+- Empathetic: "That must have been tough", "I can see why that was a difficult situation"
+- Use STAR method naturally: "Can you walk me through a specific example?", "What was the outcome?"
+- Build rapport: "That's really interesting!", "I appreciate you sharing that"
+
+FOCUS AREAS:
+Leadership, teamwork, conflict resolution, challenges overcome, career growth.
+Listen for specifics and follow up naturally. Be encouraging and supportive."""
     },
     "frontend": {
         "name": "Frontend Development",
-        "system_prompt": """You are a senior frontend developer conducting a technical interview.
-Ask about HTML, CSS, JavaScript, React, state management, performance optimization, accessibility.
-Include practical scenario-based questions.
-Keep responses concise (under 50 words). Correct misconceptions gently."""
+        "system_prompt": """You are Jordan, an enthusiastic senior frontend engineer who loves modern web development.
+
+PERSONALITY & SPEECH STYLE:
+- Passionate about frontend: "Oh, that's a great topic!", "Frontend has evolved so much here..."
+- Practical focus: "In a real app, you'd want to consider...", "I've seen this pattern work well..."
+- Debug together: "Let's think about what happens when...", "What would the user experience be if...?"
+- Encouraging: "Nice catch!", "Good instinct on that one"
+
+TECHNICAL FOCUS:
+HTML, CSS, JavaScript, React, state management, performance, accessibility.
+Include scenario-based questions. Explain concepts when correcting gently."""
     },
     "backend": {
         "name": "Backend Development",
-        "system_prompt": """You are a senior backend developer conducting a technical interview.
-Ask about APIs, databases, authentication, server architecture, security, and testing.
-Include real-world problem-solving scenarios.
-Keep responses concise (under 50 words). Probe deeper on interesting answers."""
+        "system_prompt": """You are Marcus, a pragmatic senior backend engineer who values clean architecture.
+
+PERSONALITY & SPEECH STYLE:
+- Direct but friendly: "Good foundation, let's dig deeper...", "That works, but consider this..."
+- Security-minded: "What could go wrong here?", "How would you protect against..."
+- Systems thinking: "How does this scale?", "What happens under load?"
+- Appreciative: "Solid answer!", "That's exactly the trade-off I was looking for"
+
+TECHNICAL FOCUS:
+APIs, databases, authentication, server architecture, security, testing.
+Include real-world scenarios. Probe deeper on interesting technical points."""
     },
     "general": {
         "name": "General Technical",
-        "system_prompt": """You are a professional technical interviewer. 
-The user is a candidate. Keep your responses short (under 30 words). 
-Correct them if they are wrong, or ask a follow-up question.
-Be encouraging but honest about areas for improvement."""
+        "system_prompt": """You are Sam, a friendly technical interviewer who adapts to the candidate's experience level.
+
+PERSONALITY & SPEECH STYLE:
+- Adaptable and warm: "Let's start with something fun...", "Tell me what excites you about tech"
+- Encouraging: "Great explanation!", "I like how you think about that"
+- Natural flow: "Building on that...", "Now let's shift gears a bit..."
+- Supportive corrections: "Almost there! The key difference is...", "Good thinking, and also consider..."
+
+Keep responses conversational (under 50 words). Be encouraging but honest about improvements."""
     }
 }
 
@@ -467,11 +532,14 @@ def get_difficulties():
 
 @app.post("/tts")
 async def text_to_speech(request: TextToSpeechRequest):
-    """Convert text to speech using Groq's TTS"""
+    """Convert text to speech using Groq's enhanced TTS with better voice"""
     try:
+        # Use a more natural, professional female voice for the interviewer
+        # Available PlayHT voices: Fritz, Ariana, Jennifer, etc.
+        # Ariana provides a warmer, more professional interview tone
         response = client.audio.speech.create(
             model="playht-tts",
-            voice="Fritz-PlayHT",
+            voice="Ariana-PlayHT",  # Warmer, more natural female voice
             input=request.text,
             response_format="wav"
         )
@@ -484,12 +552,27 @@ async def text_to_speech(request: TextToSpeechRequest):
         )
     except Exception as e:
         print(f"TTS Error: {e}")
-        raise HTTPException(status_code=500, detail=f"TTS failed: {str(e)}")
+        # Fallback to Fritz if Ariana fails
+        try:
+            response = client.audio.speech.create(
+                model="playht-tts",
+                voice="Fritz-PlayHT",
+                input=request.text,
+                response_format="wav"
+            )
+            audio_bytes = response.read()
+            return StreamingResponse(
+                io.BytesIO(audio_bytes),
+                media_type="audio/wav",
+                headers={"Content-Disposition": "inline; filename=speech.wav"}
+            )
+        except Exception as fallback_error:
+            raise HTTPException(status_code=500, detail=f"TTS failed: {str(fallback_error)}")
 
 
 @app.post("/resume/parse")
 async def parse_resume(file: UploadFile = File(...)):
-    """Parse resume file and extract key information using AI"""
+    """Parse resume file and extract key information using AI with enhanced question generation"""
     try:
         content = await file.read()
         
@@ -501,35 +584,38 @@ async def parse_resume(file: UploadFile = File(...)):
             except:
                 resume_text = str(content)
         
-        extraction_prompt = f"""Analyze this resume and extract key information in a structured format:
+        extraction_prompt = f"""Analyze this resume thoroughly and extract information for a technical interview:
 
 RESUME TEXT:
-{resume_text[:4000]}
+{resume_text[:5000]}
 
-Extract and return in this exact format:
-NAME: [candidate name]
-EXPERIENCE_YEARS: [total years of experience]
-CURRENT_ROLE: [current or most recent job title]
-SKILLS: [comma-separated list of top 10 technical skills]
-EDUCATION: [highest degree and field]
-KEY_PROJECTS: [2-3 notable projects, brief description]
-STRENGTHS: [3 key strengths based on resume]
-AREAS_TO_PROBE: [3 areas an interviewer should ask about]
+Extract and return in this EXACT format (be specific and detailed):
 
-Be concise and factual."""
+NAME: [Full name of candidate]
+EXPERIENCE_YEARS: [Total years of professional experience]
+CURRENT_ROLE: [Most recent job title and company]
+TOP_SKILLS: [Top 5 technical skills with proficiency indicators - list specific technologies]
+NOTABLE_PROJECTS: [2-3 most impressive projects with brief technical details]
+EDUCATION: [Degrees, institutions, relevant coursework]
+CAREER_HIGHLIGHTS: [2-3 quantifiable achievements e.g., "Improved performance by 40%"]
+TECHNICAL_DEPTH: [Areas where candidate shows deep expertise]
+POTENTIAL_GAPS: [Skills/areas that might need probing]
+SUGGESTED_QUESTIONS: [5 specific interview questions based on THIS resume, referencing actual projects/skills mentioned]
+
+Be factual and specific. The questions should directly reference items from the resume."""
 
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[{"role": "user", "content": extraction_prompt}],
             temperature=0.3,
-            max_tokens=500
+            max_tokens=800
         )
         
         parsed_info = completion.choices[0].message.content
         
         return {
             "success": True,
-            "raw_text": resume_text[:2000],
+            "raw_text": resume_text[:3000],
             "parsed_info": parsed_info,
             "filename": file.filename
         }
@@ -601,10 +687,25 @@ async def start_interview(
     if session.resume_text:
         full_system_prompt += f"""
 
-CANDIDATE'S RESUME INFORMATION:
-{session.resume_text[:2000]}
+═══════════════════════════════════════════════════════════
+CANDIDATE'S RESUME - CRITICAL: USE THIS FOR PERSONALIZED QUESTIONS
+═══════════════════════════════════════════════════════════
+{session.resume_text[:2500]}
 
-Use this information to ask about specific projects and probe their claimed skills."""
+🎯 MANDATORY RESUME-BASED QUESTIONING RULES:
+1. Your FIRST 2-3 questions MUST directly reference something from their resume
+2. Ask about SPECIFIC projects they mentioned: "I see you worked on [project] - tell me more about..."
+3. Probe their claimed skills: "You listed [skill] - can you solve this problem using it?"
+4. Challenge experience claims: "With [X] years in [role], how would you approach..."
+5. Connect resume to interview topic: "Given your background in [area], how does that apply to..."
+
+EXAMPLE GOOD OPENERS (adapt to their resume):
+- "I noticed you led [project] at [company] - what was the biggest technical challenge there?"
+- "You mentioned experience with [technology] - let's dive into that with a practical scenario..."
+- "Your work on [achievement] caught my eye - can you walk me through the architecture?"
+
+DO NOT ask generic questions when you have resume context. Make every question feel personalized.
+═══════════════════════════════════════════════════════════"""
 
     if session.job_description:
         full_system_prompt += f"""
@@ -620,24 +721,58 @@ IMPORTANT INSTRUCTIONS:
 - After each candidate response, provide a brief score (1-10) at the END of your response in this exact format: [SCORE: X/10]
 - The score should reflect: accuracy, depth, communication clarity, and relevance
 - Keep your main response under 60 words, then add the score
-- Adapt your next question difficulty based on their performance"""
+- Adapt your next question difficulty based on their performance
+- Use natural speech patterns with fillers like "I see...", "Interesting!", "Let me ask you about..."
+- Vary your tone: be encouraging after good answers, gently redirecting after weak ones"""
     
     # Create personalized opening message
     candidate_name = "there"
-    if session.resume_text and "NAME:" in session.resume_text:
+    resume_project = None
+    resume_skill = None
+    resume_role = None
+    
+    if session.resume_text:
+        # Extract name
         name_match = re.search(r'NAME:\s*([^\n]+)', session.resume_text)
         candidate_name = name_match.group(1).strip() if name_match else "there"
+        
+        # Extract a project to reference
+        project_match = re.search(r'(?:NOTABLE_PROJECTS|KEY_PROJECTS|PROJECTS):\s*([^\n]+)', session.resume_text, re.IGNORECASE)
+        if project_match:
+            resume_project = project_match.group(1).strip()[:100]
+        
+        # Extract top skill
+        skill_match = re.search(r'(?:TOP_SKILLS|SKILLS):\s*([^\n,]+)', session.resume_text, re.IGNORECASE)
+        if skill_match:
+            resume_skill = skill_match.group(1).strip()
+            
+        # Extract current role
+        role_match = re.search(r'(?:CURRENT_ROLE|ROLE):\s*([^\n]+)', session.resume_text, re.IGNORECASE)
+        if role_match:
+            resume_role = role_match.group(1).strip()
     
-    base_openings = {
-        "dsa": f"Hello {candidate_name}! I'll be your interviewer today, conducting this in the style of {company_config['name']}. Let's start with Data Structures & Algorithms. Can you explain what a hash table is and when you'd use one?",
-        "system_design": f"Welcome {candidate_name}! I'm conducting this system design interview {company_config['name']}-style. Let's start: How would you design a URL shortener like bit.ly?",
-        "behavioral": f"Hi {candidate_name}! I'm excited to learn more about you today. This will be a {company_config['name']}-style behavioral interview. Tell me about yourself and what brings you to this opportunity?",
-        "frontend": f"Hello {candidate_name}! Let's dive into frontend development, {company_config['name']}-style. Can you explain the difference between let, const, and var in JavaScript?",
-        "backend": f"Welcome {candidate_name}! Let's explore backend development with a {company_config['name']} interview approach. What's the difference between SQL and NoSQL databases?",
-        "general": f"Hello {candidate_name}! Welcome to your {company_config['name']}-style mock interview. Tell me about a recent project you've worked on."
-    }
-    
-    opening = base_openings.get(session.topic, base_openings["general"])
+    # Generate resume-aware openings if resume is available
+    if session.resume_text and (resume_project or resume_skill or resume_role):
+        resume_openings = {
+            "dsa": f"Hi {candidate_name}! Great to meet you. I've reviewed your background{' as a ' + resume_role if resume_role else ''} and I'm excited to dive into some DSA questions. {('I noticed you worked on ' + resume_project + ' - we might touch on that later. ') if resume_project else ''}Let's start with something foundational: Can you walk me through how you'd implement a hash map from scratch?",
+            "system_design": f"Welcome {candidate_name}! I see you have experience{' as a ' + resume_role if resume_role else ''}{(' with ' + resume_skill) if resume_skill else ''}. {('Your work on ' + resume_project + ' caught my eye. ') if resume_project else ''}Let's discuss system design - imagine you need to design a system similar to something you've built before. How would you approach designing a scalable notification service?",
+            "behavioral": f"Hi {candidate_name}! Thanks for joining me today. I've looked through your background{' and your role as ' + resume_role if resume_role else ''} looks really interesting. {('I\'d love to hear about ' + resume_project + ' in more detail. ') if resume_project else ''}But first, tell me a bit about yourself and what you're looking for in your next opportunity?",
+            "frontend": f"Hello {candidate_name}! I see you have frontend experience{(' with ' + resume_skill) if resume_skill else ''}{' as a ' + resume_role if resume_role else ''}. {('The ' + resume_project + ' project sounds interesting! ') if resume_project else ''}Let's start by discussing something you've likely encountered - how would you optimize the performance of a React application that's getting slow?",
+            "backend": f"Welcome {candidate_name}! Your background{' as a ' + resume_role if resume_role else ''}{(' working with ' + resume_skill) if resume_skill else ''} is impressive. {('I\'m curious about ' + resume_project + '. ') if resume_project else ''}Let's dive into backend concepts - can you tell me about your experience with database design and when you'd choose SQL vs NoSQL?",
+            "general": f"Hi {candidate_name}! Great to connect with you. I've reviewed your resume{' - ' + resume_role if resume_role else ''} looks like a great background. {('I\'d love to hear about ' + resume_project + '. ') if resume_project else ''}Let's start with what you're most proud of from your recent work experience?"
+        }
+        opening = resume_openings.get(session.topic, resume_openings["general"])
+    else:
+        # Fallback to generic but natural openings
+        base_openings = {
+            "dsa": f"Hello {candidate_name}! I'll be your interviewer today, and we'll be doing this {company_config['name']}-style. Let's warm up with Data Structures & Algorithms. Can you explain what a hash table is and walk me through when you'd use one in practice?",
+            "system_design": f"Welcome {candidate_name}! I'm excited to do this system design interview with you, {company_config['name']}-style. Let's start with a classic: How would you design a URL shortener like bit.ly? Feel free to think out loud.",
+            "behavioral": f"Hi {candidate_name}! I'm really looking forward to getting to know you today. This will be a {company_config['name']}-style behavioral interview. To kick things off, tell me about yourself and what's driving you to explore new opportunities?",
+            "frontend": f"Hello {candidate_name}! Let's have some fun with frontend development today, {company_config['name']}-style. To get started, can you explain the practical differences between let, const, and var in JavaScript?",
+            "backend": f"Welcome {candidate_name}! Let's explore backend development together with a {company_config['name']} approach. To warm up, what's your experience with SQL vs NoSQL databases, and how do you decide which to use?",
+            "general": f"Hello {candidate_name}! Welcome to your mock interview. I'm here to help you practice and improve. Let's start with something you know well - tell me about a recent project you've worked on that you're proud of."
+        }
+        opening = base_openings.get(session.topic, base_openings["general"])
     
     # Get user_id if authenticated
     user_id = current_user["_id"] if current_user else None
@@ -1056,19 +1191,38 @@ async def analyze_video_response(
         # Add expression context to the AI prompt for video mode
         expression_context = ""
         if session.get("mode") == "video":
+            # Determine coaching hint based on expression
+            coaching_hint = ""
+            if confidence < 40:
+                coaching_hint = "The candidate appears nervous - be encouraging and supportive."
+            elif confidence > 75 and engagement > 70:
+                coaching_hint = "The candidate is confident and engaged - you can ask more challenging follow-ups."
+            elif eye_contact < 30:
+                coaching_hint = "Low eye contact detected - gently encourage them to look at the camera."
+            elif emotion == "confused":
+                coaching_hint = "The candidate seems confused - consider rephrasing or offering a hint."
+            elif emotion == "frustrated":
+                coaching_hint = "Signs of frustration - offer some encouragement before continuing."
+            
             expression_context = f"""
 
-[VIDEO ANALYSIS]
+═══════════════════════════════════════════════════════════
+VIDEO INTERVIEW BODY LANGUAGE ANALYSIS
+═══════════════════════════════════════════════════════════
 Current expression data for this response:
-- Confidence Level: {confidence}%
-- Eye Contact: {eye_contact}%
-- Detected Emotion: {emotion}
-- Engagement Level: {engagement}%
+📊 Confidence Level: {confidence:.0f}% {'🟢 Strong' if confidence > 70 else '🟡 Moderate' if confidence > 40 else '🔴 Low'}
+👁️ Eye Contact: {eye_contact:.0f}% {'🟢 Good' if eye_contact > 60 else '🟡 Fair' if eye_contact > 30 else '🔴 Needs work'}
+😊 Detected Emotion: {emotion}
+⚡ Engagement Level: {engagement:.0f}%
 
-Consider this body language data when:
-1. Providing feedback (mention if they seemed nervous or confident)
-2. Adjusting your next question's difficulty
-3. Offering encouragement if confidence is low (<50%)
+{coaching_hint}
+
+IMPORTANT: Naturally incorporate body language feedback when appropriate:
+- If confidence is low, say something encouraging like "Take your time, you're doing well..."
+- If eye contact is poor, you might say "I can tell you're thinking hard - feel free to look at me when you're ready"
+- If engagement is high, match their energy!
+- Do NOT robotically read out the metrics - be natural and human.
+═══════════════════════════════════════════════════════════
 """
         
         # Build conversation for AI

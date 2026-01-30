@@ -95,6 +95,9 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
     const [notification, setNotification] = useState(null);
     const [isOnline, setIsOnline] = useState(navigator.onLine);
     
+    // Pending interview to save after login
+    const [pendingInterviewToSave, setPendingInterviewToSave] = useState(null);
+    
     // Setup step state
     const [setupStep, setSetupStep] = useState(1); // 1: basics, 2: resume/JD, 3: confirm
     
@@ -530,6 +533,17 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                 setShowAuthModal(false);
                 resetAuthForm();
                 fetchUserStats();
+                
+                // Dispatch auth:login event for other components
+                window.dispatchEvent(new CustomEvent('auth:login'));
+                
+                // Auto-save pending interview if exists
+                if (pendingInterviewToSave) {
+                    await autoSaveInterviewAfterLogin(pendingInterviewToSave, data.access_token);
+                    setPendingInterviewToSave(null);
+                }
+                
+                showNotification('Welcome back! 🎉', 'success');
             } else {
                 setAuthError(data.detail || 'Login failed');
             }
@@ -571,6 +585,17 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                 setIsAuthenticated(true);
                 setShowAuthModal(false);
                 resetAuthForm();
+                
+                // Dispatch auth:login event for other components
+                window.dispatchEvent(new CustomEvent('auth:login'));
+                
+                // Auto-save pending interview if exists
+                if (pendingInterviewToSave) {
+                    await autoSaveInterviewAfterLogin(pendingInterviewToSave, data.access_token);
+                    setPendingInterviewToSave(null);
+                }
+                
+                showNotification('Account created! Welcome aboard! 🚀', 'success');
             } else {
                 setAuthError(data.detail || 'Registration failed');
             }
@@ -580,12 +605,34 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
         setIsAuthLoading(false);
     };
     
+    // Auto-save interview after login/register
+    const autoSaveInterviewAfterLogin = async (interviewSessionId, token) => {
+        try {
+            const response = await fetch(`${API_URL}/user/interviews/save?session_id=${interviewSessionId}`, {
+                method: "POST",
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                showNotification('Interview automatically saved to your history! 📁', 'success');
+                fetchInterviewHistory();
+            }
+        } catch (error) {
+            console.error("Error auto-saving interview:", error);
+        }
+    };
+    
     const handleLogout = () => {
         localStorage.removeItem('authToken');
         setAuthToken(null);
         setUser(null);
         setIsAuthenticated(false);
         setUserStats(null);
+        // Dispatch logout event
+        window.dispatchEvent(new CustomEvent('auth:logout'));
     };
     
     const resetAuthForm = () => {
@@ -602,12 +649,16 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
         return token ? { 'Authorization': `Bearer ${token}` } : {};
     };
 
-    // Auth-aware action handler - shows login prompt for guests
-    const requireAuth = (action, actionName) => {
+    // Auth-aware action handler - shows login prompt for guests and stores pending interview
+    const requireAuth = (action, actionName, interviewId = null) => {
         if (!isAuthenticated) {
+            // Store the interview ID to auto-save after login
+            if (interviewId) {
+                setPendingInterviewToSave(interviewId);
+            }
             setAuthMode('login');
             setShowAuthModal(true);
-            showNotification(`Please login to ${actionName}`, 'info');
+            showNotification(`Please login to ${actionName}. Your interview will be saved after login.`, 'info');
             return false;
         }
         return true;
@@ -642,16 +693,17 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
         }
     };
 
-    // Save to history - requires authentication
+    // Save to history - requires authentication (will auto-save after login if not authenticated)
     const handleSaveToHistory = async () => {
-        if (!requireAuth(() => {}, 'save interview history')) return;
-        
         // Use current sessionId or fall back to sessionId stored in summary
         const saveSessionId = sessionId || summary?.sessionId;
         if (!saveSessionId) {
             showNotification('No interview session to save', 'error');
             return;
         }
+        
+        // Pass the session ID to requireAuth so it can be saved after login
+        if (!requireAuth(() => {}, 'save interview history', saveSessionId)) return;
         
         try {
             const response = await fetch(`${API_URL}/user/interviews/save?session_id=${saveSessionId}`, {
@@ -664,7 +716,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
             
             if (response.ok) {
                 const data = await response.json();
-                showNotification(data.message || 'Interview saved to your history!', 'success');
+                showNotification(data.message || 'Interview saved to your history! ✅', 'success');
                 fetchInterviewHistory();
             } else {
                 const error = await response.json();
