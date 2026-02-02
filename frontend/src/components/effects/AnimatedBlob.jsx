@@ -32,25 +32,22 @@ const AnimatedBlob = ({ global = false, variant = 'default', enableScrollBlur = 
         };
     }, [enableScrollBlur]);
 
-    // Variant-based opacity and settings
+    // Variant-based settings (opacity removed - controlled by CSS now)
     const variantStyles = useMemo(() => {
         switch (variant) {
             case 'landing':
                 return {
                     containerClass: 'variant-landing',
-                    opacity: 0.55,
                     blur: scrollBlur
                 };
             case 'blurred':
                 return {
                     containerClass: 'variant-blurred',
-                    opacity: 0.35,
                     blur: 12
                 };
             default:
                 return {
                     containerClass: '',
-                    opacity: 0.5,
                     blur: 0
                 };
         }
@@ -70,8 +67,7 @@ const AnimatedBlob = ({ global = false, variant = 'default', enableScrollBlur = 
         <div 
             className={`animated-blob-container ${global ? 'global-background' : ''} ${variantStyles.containerClass}`}
             style={{
-                filter: variantStyles.blur > 0 ? `blur(${variantStyles.blur}px)` : 'none',
-                opacity: variantStyles.opacity
+                filter: variantStyles.blur > 0 ? `blur(${variantStyles.blur}px)` : 'none'
             }}
         >
             {/* Simplified SVG Blob - CSS animations for better performance */}

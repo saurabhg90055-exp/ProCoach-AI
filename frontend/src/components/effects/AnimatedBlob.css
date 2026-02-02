@@ -14,7 +14,7 @@
 }
 
 .animated-blob-container.global-background {
-    z-index: 0;
+    z-index: -1;
 }
 
 /* Variant styles */
