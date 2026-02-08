@@ -1,0 +1,177 @@
+/* Live Counter Styles */
+.live-counter {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem 2rem;
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    margin-top: 2rem;
+}
+
+.live-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pulse-dot {
+    width: 8px;
+    height: 8px;
+    background: #10b981;
+    border-radius: 50%;
+    animation: pulse-animation 2s ease-in-out infinite;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+}
+
+@keyframes pulse-animation {
+    0%, 100% { 
+        opacity: 1; 
+        transform: scale(1);
+    }
+    50% { 
+        opacity: 0.5; 
+        transform: scale(1.2);
+    }
+}
+
+.live-text {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #10b981;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.counter-grid {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.counter-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.counter-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    transition: transform 0.3s ease;
+}
+
+.counter-icon.users {
+    background: rgba(99, 102, 241, 0.15);
+    color: #818cf8;
+}
+
+.counter-icon.interviews {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+}
+
+.counter-icon.questions {
+    background: rgba(244, 114, 182, 0.15);
+    color: #f472b6;
+}
+
+.counter-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.counter-value {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.2;
+}
+
+.counter-label {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.5);
+    white-space: nowrap;
+}
+
+.counter-divider {
+    width: 1px;
+    height: 30px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Light Theme */
+[data-theme="light"] .live-counter {
+    background: rgba(255, 255, 255, 0.8);
+    border-color: rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .counter-value {
+    color: #1e293b;
+}
+
+[data-theme="light"] .counter-label {
+    color: #64748b;
+}
+
+[data-theme="light"] .counter-divider {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .counter-icon.users {
+    background: rgba(99, 102, 241, 0.1);
+    color: #6366f1;
+}
+
+[data-theme="light"] .counter-icon.interviews {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+}
+
+[data-theme="light"] .counter-icon.questions {
+    background: rgba(236, 72, 153, 0.1);
+    color: #db2777;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .live-counter {
+        padding: 1rem 1.25rem;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .counter-grid {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 1rem;
+    }
+
+    .counter-divider {
+        display: none;
+    }
+
+    .counter-item {
+        min-width: 100px;
+    }
+}
+
+@media (max-width: 480px) {
+    .counter-grid {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .counter-item {
+        width: 100%;
+        justify-content: center;
+    }
+}

@@ -8,6 +8,7 @@ import uuid
 import io
 import re
 import time
+import asyncio
 from datetime import datetime
 from typing import Optional, List
 from contextlib import asynccontextmanager
@@ -20,6 +21,7 @@ from pydantic import BaseModel
 from groq import Groq
 from dotenv import load_dotenv
 import shutil
+import edge_tts
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -382,6 +384,11 @@ class TextToSpeechRequest(BaseModel):
     text: str
 
 
+class EdgeTTSRequest(BaseModel):
+    text: str
+    voice: str = "en-US-AriaNeural"  # Default to natural female voice
+
+
 class ResumeParseRequest(BaseModel):
     text: str
 
@@ -639,6 +646,62 @@ async def text_to_speech(request: TextToSpeechRequest):
             )
         except Exception as fallback_error:
             raise HTTPException(status_code=500, detail=f"TTS failed: {str(fallback_error)}")
+
+
+@app.post("/tts/edge")
+async def edge_text_to_speech(request: EdgeTTSRequest):
+    """
+    Free Edge TTS using Microsoft's Text-to-Speech engine.
+    
+    Available voices (all free, high-quality neural voices):
+    - en-US-AriaNeural (female, conversational - DEFAULT)
+    - en-US-JennyNeural (female, professional)
+    - en-US-GuyNeural (male, conversational)
+    - en-US-DavisNeural (male, professional)
+    - en-GB-SoniaNeural (female, British)
+    - en-AU-NatashaNeural (female, Australian)
+    """
+    try:
+        # Create communicate instance for edge-tts
+        communicate = edge_tts.Communicate(request.text, request.voice)
+        
+        # Collect audio data in memory
+        audio_buffer = io.BytesIO()
+        
+        async for chunk in communicate.stream():
+            if chunk["type"] == "audio":
+                audio_buffer.write(chunk["data"])
+        
+        audio_buffer.seek(0)
+        
+        return StreamingResponse(
+            audio_buffer,
+            media_type="audio/mpeg",
+            headers={"Content-Disposition": "inline; filename=speech.mp3"}
+        )
+    except Exception as e:
+        print(f"Edge TTS Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Edge TTS failed: {str(e)}")
+
+
+@app.get("/tts/voices")
+async def get_available_voices():
+    """Get list of available Edge TTS voices"""
+    return {
+        "voices": [
+            {"id": "en-US-AriaNeural", "name": "Aria", "gender": "Female", "locale": "US English", "recommended": True},
+            {"id": "en-US-JennyNeural", "name": "Jenny", "gender": "Female", "locale": "US English"},
+            {"id": "en-US-GuyNeural", "name": "Guy", "gender": "Male", "locale": "US English"},
+            {"id": "en-US-DavisNeural", "name": "Davis", "gender": "Male", "locale": "US English"},
+            {"id": "en-GB-SoniaNeural", "name": "Sonia", "gender": "Female", "locale": "UK English"},
+            {"id": "en-AU-NatashaNeural", "name": "Natasha", "gender": "Female", "locale": "Australian English"},
+            {"id": "en-IN-NeerjaNeural", "name": "Neerja", "gender": "Female", "locale": "Indian English"},
+            {"id": "en-US-ChristopherNeural", "name": "Christopher", "gender": "Male", "locale": "US English"},
+            {"id": "en-US-EricNeural", "name": "Eric", "gender": "Male", "locale": "US English"},
+            {"id": "en-US-MichelleNeural", "name": "Michelle", "gender": "Female", "locale": "US English"}
+        ],
+        "default": "en-US-AriaNeural"
+    }
 
 
 @app.post("/resume/parse")

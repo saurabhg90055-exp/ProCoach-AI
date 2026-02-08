@@ -13,6 +13,35 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Smooth scrolling globally */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Performance optimization for animations */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Smooth transitions for interactive elements */
+a, button, input, textarea, select {
+  transition: all 0.2s ease-out;
+}
+
+/* GPU acceleration for animated elements */
+.animated,
+[class*="motion"],
+.hero-badge,
+.feature-card,
+.stat-item,
+.cta-button {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
 a {
   font-weight: 500;
   color: var(--color-primary, #646cff);

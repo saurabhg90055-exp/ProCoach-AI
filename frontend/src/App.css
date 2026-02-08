@@ -46,7 +46,66 @@ button svg,
   z-index: 1;
 }
 
-/* Global text visibility improvements */
+/* Simple Gradient Background */
+.app-background {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(135deg, 
+    #0f0f23 0%, 
+    #1a1a3e 25%, 
+    #2d1b4e 50%, 
+    #1a1a3e 75%, 
+    #0f0f23 100%
+  );
+  transition: background 0.5s ease;
+}
+
+/* Light theme background */
+[data-theme="light"] .app-background {
+  background: linear-gradient(135deg, 
+    #f8fafc 0%, 
+    #e0e7ff 25%, 
+    #c7d2fe 50%, 
+    #e0e7ff 75%, 
+    #f8fafc 100%
+  );
+}
+
+/* Sunset theme background */
+[data-theme="sunset"] .app-background {
+  background: linear-gradient(135deg, 
+    #1a0a0a 0%, 
+    #2d1a1a 25%, 
+    #3d1f1f 50%, 
+    #2d1a1a 75%, 
+    #1a0a0a 100%
+  );
+}
+
+/* Forest theme background */
+[data-theme="forest"] .app-background {
+  background: linear-gradient(135deg, 
+    #0a1a0a 0%, 
+    #1a2d1a 25%, 
+    #1f3d1f 50%, 
+    #1a2d1a 75%, 
+    #0a1a0a 100%
+  );
+}
+
+/* Ocean theme background */
+[data-theme="ocean"] .app-background {
+  background: linear-gradient(135deg, 
+    #0a0a1a 0%, 
+    #1a1a3d 25%, 
+    #1f2f4d 50%, 
+    #1a1a3d 75%, 
+    #0a0a1a 100%
+  );
+}
+
+/* Global text visibility improvements - dark theme */
 .app-container h1,
 .app-container h2,
 .app-container h3,
@@ -56,10 +115,28 @@ button svg,
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 }
 
+/* Light theme - remove text shadows */
+[data-theme="light"] .app-container h1,
+[data-theme="light"] .app-container h2,
+[data-theme="light"] .app-container h3,
+[data-theme="light"] .app-container h4,
+[data-theme="light"] .app-container h5,
+[data-theme="light"] .app-container h6 {
+  text-shadow: none;
+  color: #1e293b;
+}
+
 .app-container p,
 .app-container span,
 .app-container label {
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="light"] .app-container p,
+[data-theme="light"] .app-container span,
+[data-theme="light"] .app-container label {
+  text-shadow: none;
+  color: #334155;
 }
 
 /* App Header */
@@ -79,6 +156,35 @@ button svg,
   height: 72px;
   min-height: 72px;
   max-height: 72px;
+}
+
+/* Light theme header */
+[data-theme="light"] .app-header {
+  background: rgba(255, 255, 255, 0.95);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .logo-text {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+[data-theme="light"] .nav-btn {
+  color: #64748b;
+}
+
+[data-theme="light"] .nav-btn:hover {
+  background: rgba(79, 70, 229, 0.08);
+  color: #4f46e5;
+}
+
+[data-theme="light"] .nav-btn.active {
+  background: rgba(79, 70, 229, 0.12);
+  color: #4f46e5;
+  border-color: rgba(79, 70, 229, 0.2);
 }
 
 .logo-section {
@@ -1158,6 +1264,74 @@ button svg,
   border-color: #667eea;
   background: linear-gradient(90deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
   color: white;
+}
+
+/* Engine Buttons */
+.engine-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.engine-btn {
+  flex: 1;
+  min-width: 120px;
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #a0aec0;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.engine-btn:hover {
+  border-color: rgba(102, 126, 234, 0.5);
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.engine-btn.active {
+  border-color: #667eea;
+  background: linear-gradient(90deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
+  color: white;
+}
+
+/* Voice Select */
+.voice-select {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a0aec0' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  padding-right: 2.5rem;
+}
+
+.voice-select:hover,
+.voice-select:focus {
+  border-color: rgba(102, 126, 234, 0.5);
+  background-color: rgba(102, 126, 234, 0.1);
+  outline: none;
+}
+
+.voice-select option,
+.voice-select optgroup {
+  background: #1a1a2e;
+  color: white;
+  padding: 0.5rem;
+}
+
+.voice-select optgroup {
+  font-weight: 600;
+  color: #c7d2fe;
 }
 
 /* File Input */
@@ -3663,6 +3837,32 @@ input[type="file"].file-input::file-selector-button {
   color: var(--color-text, #1a1a2e);
 }
 
+/* Light theme background overlay - provides a clean light background */
+[data-theme="light"] .app-container::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%);
+  z-index: -2;
+  pointer-events: none;
+}
+
+/* Light theme reduces text shadows for better clarity */
+[data-theme="light"] .app-container h1,
+[data-theme="light"] .app-container h2,
+[data-theme="light"] .app-container h3,
+[data-theme="light"] .app-container h4,
+[data-theme="light"] .app-container h5,
+[data-theme="light"] .app-container h6 {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .app-container p,
+[data-theme="light"] .app-container span,
+[data-theme="light"] .app-container label {
+  text-shadow: none;
+}
+
 /* Header Light Theme */
 [data-theme="light"] .app-header {
   background: rgba(255, 255, 255, 0.98);
@@ -3867,6 +4067,47 @@ input[type="file"].file-input::file-selector-button {
   border-color: #4f46e5;
   background: linear-gradient(90deg, rgba(79, 70, 229, 0.15), rgba(124, 58, 237, 0.15));
   color: #1a1a2e;
+}
+
+/* Engine Buttons Light Theme */
+[data-theme="light"] .engine-btn {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #374151;
+}
+
+[data-theme="light"] .engine-btn:hover {
+  border-color: rgba(79, 70, 229, 0.4);
+  background: rgba(79, 70, 229, 0.05);
+}
+
+[data-theme="light"] .engine-btn.active {
+  border-color: #4f46e5;
+  background: linear-gradient(90deg, rgba(79, 70, 229, 0.15), rgba(124, 58, 237, 0.15));
+  color: #1a1a2e;
+}
+
+/* Voice Select Light Theme */
+[data-theme="light"] .voice-select {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #1a1a2e;
+}
+
+[data-theme="light"] .voice-select:hover,
+[data-theme="light"] .voice-select:focus {
+  border-color: rgba(79, 70, 229, 0.4);
+  background-color: rgba(255, 255, 255, 1);
+}
+
+[data-theme="light"] .voice-select option,
+[data-theme="light"] .voice-select optgroup {
+  background: #fff;
+  color: #1a1a2e;
+}
+
+[data-theme="light"] .voice-select optgroup {
+  color: #4f46e5;
 }
 
 /* Mode Buttons Light Theme */

@@ -5,6 +5,9 @@ import {
     Mic, Brain, BarChart2, Shield, Zap, Star, Play, ArrowRight,
     CheckCircle, MessageSquare, Clock
 } from 'lucide-react';
+import ProCoachAnimation from './ProCoachAnimation';
+import LiveCounter from './LiveCounter';
+import TrustLogos from './TrustLogos';
 import './LandingPage.css';
 
 const LandingPage = ({ onStartSetup, stats }) => {
@@ -95,78 +98,101 @@ const LandingPage = ({ onStartSetup, stats }) => {
             initial="hidden"
             animate="visible"
         >
-            {/* Hero Section */}
+            {/* Hero Section - Split Layout */}
             <motion.section className="hero-section" variants={itemVariants}>
-                <motion.div 
-                    className="hero-badge"
-                    whileHover={{ scale: 1.05 }}
-                    animate={floatingAnimation}
-                >
-                    <Sparkles className="badge-icon" />
-                    <span>AI-Powered Interview Coach</span>
-                </motion.div>
+                <div className="hero-split-container">
+                    {/* Left Side - Content */}
+                    <div className="hero-content-left">
+                        <motion.div 
+                            className="hero-badge"
+                            whileHover={{ scale: 1.05 }}
+                            animate={floatingAnimation}
+                        >
+                            <Sparkles className="badge-icon" />
+                            <span>AI-Powered Interview Coach</span>
+                        </motion.div>
 
-                <h1 className="hero-title">
-                    <span className="title-line-1">Welcome to</span>
-                    <span className="title-brand">
-                        <Sparkles className="brand-icon" />
-                        ProCoach AI
-                    </span>
-                </h1>
+                        <h1 className="hero-title">
+                            <span className="title-line-1">Welcome to</span>
+                            <span className="title-brand">
+                                <Sparkles className="brand-icon" />
+                                ProCoach AI
+                            </span>
+                        </h1>
 
-                <p className="hero-subtitle">
-                    Your personal AI coach and mock interviewer. Master technical interviews 
-                    with real-time feedback, voice practice, and personalized coaching.
-                </p>
+                        <p className="hero-subtitle">
+                            Your personal AI coach and mock interviewer. Master technical interviews 
+                            with real-time feedback, voice practice, and personalized coaching.
+                        </p>
 
-                <div className="hero-features">
-                    <div className="hero-feature">
-                        <CheckCircle size={18} />
-                        <span>Real-time AI feedback</span>
+                        <div className="hero-features">
+                            <div className="hero-feature">
+                                <CheckCircle size={18} />
+                                <span>Real-time AI feedback</span>
+                            </div>
+                            <div className="hero-feature">
+                                <CheckCircle size={18} />
+                                <span>Voice-based practice</span>
+                            </div>
+                            <div className="hero-feature">
+                                <CheckCircle size={18} />
+                                <span>Personalized questions</span>
+                            </div>
+                        </div>
+
+                        <div className="hero-cta">
+                            <motion.button
+                                className="cta-button primary"
+                                onClick={onStartSetup}
+                                whileHover={{ scale: 1.05, boxShadow: "0 20px 40px rgba(99, 102, 241, 0.4)" }}
+                                whileTap={{ scale: 0.95 }}
+                            >
+                                <Play size={20} />
+                                <span>Setup Your Interview</span>
+                                <ChevronRight size={20} />
+                            </motion.button>
+                            <p className="cta-note">No credit card required • Start free</p>
+                        </div>
+
+                        <motion.div 
+                            className="hero-stats"
+                            variants={itemVariants}
+                        >
+                            <div className="stat-item">
+                                <span className="stat-number">10K+</span>
+                                <span className="stat-label">Interviews Completed</span>
+                            </div>
+                            <div className="stat-divider"></div>
+                            <div className="stat-item">
+                                <span className="stat-number">95%</span>
+                                <span className="stat-label">Success Rate</span>
+                            </div>
+                            <div className="stat-divider"></div>
+                            <div className="stat-item">
+                                <span className="stat-number">50+</span>
+                                <span className="stat-label">Topics Covered</span>
+                            </div>
+                        </motion.div>
+
+                        {/* Live Activity Counter */}
+                        <LiveCounter />
                     </div>
-                    <div className="hero-feature">
-                        <CheckCircle size={18} />
-                        <span>Voice-based practice</span>
-                    </div>
-                    <div className="hero-feature">
-                        <CheckCircle size={18} />
-                        <span>Personalized questions</span>
-                    </div>
-                </div>
 
-                <div className="hero-cta">
-                    <motion.button
-                        className="cta-button primary"
-                        onClick={onStartSetup}
-                        whileHover={{ scale: 1.05, boxShadow: "0 20px 40px rgba(99, 102, 241, 0.4)" }}
-                        whileTap={{ scale: 0.95 }}
+                    {/* Right Side - Animation */}
+                    <motion.div 
+                        className="hero-illustration-right"
+                        initial={{ opacity: 0, x: 50, scale: 0.95 }}
+                        animate={{ opacity: 1, x: 0, scale: 1 }}
+                        transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
                     >
-                        <Play size={20} />
-                        <span>Setup Your Interview</span>
-                        <ChevronRight size={20} />
-                    </motion.button>
-                    <p className="cta-note">No credit card required • Start free</p>
+                        <ProCoachAnimation />
+                    </motion.div>
                 </div>
+            </motion.section>
 
-                <motion.div 
-                    className="hero-stats"
-                    variants={itemVariants}
-                >
-                    <div className="stat-item">
-                        <span className="stat-number">10K+</span>
-                        <span className="stat-label">Interviews Completed</span>
-                    </div>
-                    <div className="stat-divider"></div>
-                    <div className="stat-item">
-                        <span className="stat-number">95%</span>
-                        <span className="stat-label">Success Rate</span>
-                    </div>
-                    <div className="stat-divider"></div>
-                    <div className="stat-item">
-                        <span className="stat-number">50+</span>
-                        <span className="stat-label">Topics Covered</span>
-                    </div>
-                </motion.div>
+            {/* Trust Logos Section */}
+            <motion.section variants={itemVariants}>
+                <TrustLogos />
             </motion.section>
 
             {/* Features Section */}

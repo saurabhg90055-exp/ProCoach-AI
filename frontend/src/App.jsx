@@ -1,9 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import AudioRecorder from './AudioRecorder';
-import { ThemeProvider } from './components/theme/ThemeProvider';
+import { ThemeProvider, useTheme } from './components/theme/ThemeProvider';
 import ConfettiCelebration, { useConfetti } from './components/effects/ConfettiCelebration';
-import { AnimatedBlob } from './components/effects';
 import SettingsPanel from './components/settings/SettingsPanel';
 import { useXPSystem, LevelProgressBar, XPGainPopup, AchievementUnlock } from './components/gamification/XPSystem';
 import Dashboard from './components/dashboard/Dashboard';
@@ -23,6 +22,50 @@ function AppContent() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState('login');
+  const [backgroundBlur, setBackgroundBlur] = useState(0);
+  const rafRef = useRef(null);
+  const lastScrollY = useRef(0);
+
+  const { themeName, theme } = useTheme();
+
+  // Reset scroll position when view changes
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    lastScrollY.current = 0;
+  }, [currentView]);
+
+  useEffect(() => {
+    if (currentView !== 'landing') {
+      setBackgroundBlur(12);
+      return undefined;
+    }
+
+    // Reset blur at beginning for landing page
+    setBackgroundBlur(0);
+
+    const handleScroll = () => {
+      if (rafRef.current) return;
+      rafRef.current = requestAnimationFrame(() => {
+        const scrollY = window.scrollY;
+        if (Math.abs(scrollY - lastScrollY.current) > 2) {
+          const maxBlur = 14;
+          const scrollThreshold = 500;
+          const blur = Math.min((scrollY / scrollThreshold) * maxBlur, maxBlur);
+          setBackgroundBlur(blur);
+          lastScrollY.current = scrollY;
+        }
+        rafRef.current = null;
+      });
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [currentView]);
   
   // Auth context
   const { user, isAuthenticated, isLoading: authLoading, logout, dashboardData, addXP, syncSettings } = useAuth();
@@ -134,12 +177,8 @@ function AppContent() {
 
   return (
     <div className="app-container">
-      {/* Global Animated Background */}
-      <AnimatedBlob 
-        global={true} 
-        variant={currentView === 'landing' ? 'landing' : 'blurred'}
-        enableScrollBlur={currentView === 'landing'}
-      />
+      {/* Simple Gradient Background */}
+      <div className="app-background" />
 
       {/* Navigation Header */}
       <header className="app-header">

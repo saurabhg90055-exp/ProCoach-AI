@@ -9,6 +9,8 @@
     overflow: hidden;
     z-index: -1;
     background: linear-gradient(135deg, #030308 0%, #0a0a1a 50%, #050510 100%);
+    background-size: 200% 200%;
+    animation: gradient-shift 24s ease-in-out infinite;
     pointer-events: none;
     will-change: filter, opacity;
 }
@@ -34,6 +36,7 @@
     transform: translate(-50%, -50%);
     width: 70vmin;
     height: 70vmin;
+    animation: blob-orbit 32s linear infinite;
 }
 
 /* Blob layers - pure CSS morphing animation */
@@ -102,6 +105,7 @@
     left: 0;
     width: 100%;
     height: 100%;
+    animation: glow-orbit 40s linear infinite;
 }
 
 .glow-orb {
@@ -168,21 +172,21 @@
 /* ===== KEYFRAME ANIMATIONS ===== */
 
 @keyframes blob-morph-1 {
-    0%, 100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; transform: translate(-50%, -50%) rotate(0deg); }
-    25% { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; transform: translate(-50%, -50%) rotate(90deg); }
-    50% { border-radius: 50% 60% 30% 60% / 30% 40% 70% 50%; transform: translate(-50%, -50%) rotate(180deg); }
-    75% { border-radius: 40% 50% 60% 30% / 60% 50% 40% 60%; transform: translate(-50%, -50%) rotate(270deg); }
+    0%, 100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; transform: translate(-50%, -50%) rotate(0deg) scale(1); }
+    25% { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; transform: translate(-48%, -52%) rotate(90deg) scale(1.03); }
+    50% { border-radius: 50% 60% 30% 60% / 30% 40% 70% 50%; transform: translate(-52%, -48%) rotate(180deg) scale(0.98); }
+    75% { border-radius: 40% 50% 60% 30% / 60% 50% 40% 60%; transform: translate(-49%, -51%) rotate(270deg) scale(1.02); }
 }
 
 @keyframes blob-morph-2 {
-    0%, 100% { border-radius: 40% 60% 60% 40% / 70% 30% 50% 60%; transform: translate(-50%, -50%) rotate(0deg); }
-    33% { border-radius: 60% 40% 30% 60% / 40% 60% 50% 40%; transform: translate(-50%, -50%) rotate(120deg); }
-    66% { border-radius: 50% 30% 50% 60% / 60% 50% 30% 50%; transform: translate(-50%, -50%) rotate(240deg); }
+    0%, 100% { border-radius: 40% 60% 60% 40% / 70% 30% 50% 60%; transform: translate(-50%, -50%) rotate(0deg) scale(1); }
+    33% { border-radius: 60% 40% 30% 60% / 40% 60% 50% 40%; transform: translate(-51%, -49%) rotate(120deg) scale(1.02); }
+    66% { border-radius: 50% 30% 50% 60% / 60% 50% 30% 50%; transform: translate(-49%, -51%) rotate(240deg) scale(0.99); }
 }
 
 @keyframes blob-morph-3 {
     0%, 100% { border-radius: 50% 50% 40% 60% / 60% 40% 60% 40%; transform: translate(-50%, -50%) scale(1); }
-    50% { border-radius: 40% 60% 60% 40% / 40% 60% 40% 60%; transform: translate(-50%, -50%) scale(1.05); }
+    50% { border-radius: 40% 60% 60% 40% / 40% 60% 40% 60%; transform: translate(-50%, -50%) scale(1.06); }
 }
 
 @keyframes blob-pulse {
@@ -206,6 +210,24 @@
     0%, 100% { transform: translate(0, 0); }
     33% { transform: translate(15%, -10%); }
     66% { transform: translate(-10%, 15%); }
+}
+
+@keyframes gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+@keyframes blob-orbit {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    50% { transform: translate(-50%, -50%) rotate(180deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@keyframes glow-orbit {
+    0% { transform: rotate(0deg); }
+    50% { transform: rotate(180deg); }
+    100% { transform: rotate(360deg); }
 }
 
 @keyframes particle-float {

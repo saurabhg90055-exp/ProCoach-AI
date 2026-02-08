@@ -15,9 +15,40 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    text-align: center;
     padding: 4rem 2rem;
     overflow: hidden;
+}
+
+/* Hero Split Layout Container */
+.hero-split-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 3rem;
+    width: 100%;
+    max-width: 1300px;
+    margin: 0 auto;
+}
+
+/* Left Side - Content (Centered) */
+.hero-content-left {
+    flex: 1;
+    max-width: 600px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+/* Right Side - Illustration */
+.hero-illustration-right {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 450px;
+    position: relative;
 }
 
 .hero-badge {
@@ -61,11 +92,11 @@
 }
 
 .title-brand {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
     gap: 0.75rem;
-    background: linear-gradient(135deg, #818cf8 0%, #f472b6 50%, #a78bfa 100%);
+    background: white;
+    /* background: linear-gradient(135deg, #818cf8 0%, #f472b6 50%, #a78bfa 100%); */
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -98,7 +129,7 @@
 .hero-features {
     display: flex;
     flex-wrap: wrap;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 1.5rem;
     margin-bottom: 2.5rem;
 }
@@ -120,7 +151,7 @@
 .hero-cta {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
     gap: 1rem;
     margin-bottom: 3rem;
 }
@@ -160,9 +191,8 @@
 }
 
 .hero-stats {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
     gap: 2rem;
     padding: 1.5rem 2.5rem;
     background: rgba(10, 10, 25, 0.6);
@@ -525,13 +555,31 @@
 
 /* ============== LIGHT THEME SUPPORT ============== */
 
-/* Hero Section Light Theme */
+/* Hero Title Light Theme */
+[data-theme="light"] .hero-title {
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
 [data-theme="light"] .title-line-1 {
     color: rgba(26, 26, 46, 0.7);
+    text-shadow: none;
+}
+
+[data-theme="light"] .title-brand {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: none;
+}
+
+[data-theme="light"] .brand-icon {
+    color: #f59e0b;
 }
 
 [data-theme="light"] .hero-subtitle {
     color: rgba(26, 26, 46, 0.6);
+    text-shadow: none;
 }
 
 [data-theme="light"] .hero-features {
@@ -540,10 +588,16 @@
 
 [data-theme="light"] .hero-feature {
     color: rgba(26, 26, 46, 0.7);
+    text-shadow: none;
+}
+
+[data-theme="light"] .hero-feature svg {
+    color: #059669;
 }
 
 [data-theme="light"] .cta-note {
     color: rgba(26, 26, 46, 0.5);
+    text-shadow: none;
 }
 
 /* Hero Badge Light Theme */
@@ -560,8 +614,17 @@
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
+[data-theme="light"] .stat-number {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: none;
+}
+
 [data-theme="light"] .stat-label {
     color: rgba(26, 26, 46, 0.5);
+    text-shadow: none;
 }
 
 [data-theme="light"] .stat-divider {
@@ -690,10 +753,54 @@
 }
 
 /* Responsive */
+@media (max-width: 1024px) {
+    .hero-split-container {
+        flex-direction: column;
+        gap: 2rem;
+    }
+    
+    .hero-content-left {
+        max-width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+    }
+    
+    .hero-features {
+        justify-content: center;
+    }
+    
+    .hero-cta {
+        align-items: center;
+    }
+    
+    .hero-stats {
+        display: flex;
+        justify-content: center;
+    }
+    
+    .hero-illustration-right {
+        min-height: 350px;
+        width: 100%;
+        max-width: 500px;
+    }
+    
+    .title-brand {
+        display: flex;
+        justify-content: center;
+    }
+}
+
 @media (max-width: 768px) {
     .hero-section {
         padding: 3rem 1.5rem;
         min-height: auto;
+    }
+    
+    .hero-split-container {
+        gap: 1.5rem;
     }
 
     .hero-stats {
@@ -716,5 +823,9 @@
 
     .step-card {
         max-width: 100%;
+    }
+    
+    .hero-illustration-right {
+        min-height: 280px;
     }
 }

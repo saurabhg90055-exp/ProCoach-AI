@@ -1,0 +1,55 @@
+.darkveil-background {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.85;
+    filter: blur(var(--darkveil-blur, 0px)) saturate(1.15) brightness(0.95);
+    isolation: isolate;
+    transition: filter 0.3s ease-out, opacity 0.3s ease-out;
+    will-change: filter, opacity;
+}
+
+.darkveil-background::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--color-secondary, #8b5cf6);
+    mix-blend-mode: color;
+    opacity: 0.6;
+    pointer-events: none;
+    transition: opacity 0.3s ease-out;
+}
+
+.darkveil-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* Theme-specific tuning */
+[data-theme="light"] .darkveil-background {
+    opacity: 0.2;
+    filter: blur(var(--darkveil-blur, 0px)) saturate(0.4) brightness(1.4);
+}
+
+[data-theme="light"] .darkveil-background::before {
+    opacity: 0.15;
+    mix-blend-mode: multiply;
+    background: linear-gradient(135deg, rgba(79, 70, 229, 0.3), rgba(124, 58, 237, 0.2));
+}
+
+[data-theme="sunset"] .darkveil-background {
+    opacity: 0.9;
+    filter: blur(var(--darkveil-blur, 0px)) saturate(1.35) brightness(0.95);
+}
+
+[data-theme="forest"] .darkveil-background {
+    opacity: 0.85;
+    filter: blur(var(--darkveil-blur, 0px)) saturate(1.2) brightness(0.95);
+}
+
+[data-theme="ocean"] .darkveil-background {
+    opacity: 0.9;
+    filter: blur(var(--darkveil-blur, 0px)) saturate(1.25) brightness(0.95);
+}

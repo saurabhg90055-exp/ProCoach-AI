@@ -34,6 +34,8 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
     const [selectedDuration, setSelectedDuration] = useState(30);
     const [interviewMode, setInterviewMode] = useState("audio"); // 'audio' | 'video'
     const [enableTTS, setEnableTTS] = useState(true);
+    const [ttsEngine, setTtsEngine] = useState("edge"); // 'browser' | 'edge'
+    const [edgeVoice, setEdgeVoice] = useState("en-US-AriaNeural");
     const [topics, setTopics] = useState([]);
     const [companies, setCompanies] = useState([]);
     const [difficulties, setDifficulties] = useState([]);
@@ -765,14 +767,58 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
     const speakText = async (text) => {
         if (!enableTTS) return;
         
-        // Use Web Speech API (browser built-in TTS - free & reliable)
+        setIsSpeaking(true);
+        setAvatarState('speaking');
+        
+        // Play sound effect
+        if (soundEnabled) soundEffects.play('aiSpeaking');
+        
+        if (ttsEngine === 'edge') {
+            // Use Edge TTS (Microsoft Neural Voices - higher quality)
+            try {
+                const response = await fetch(`${API_URL}/tts/edge`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        text: text,
+                        voice: edgeVoice 
+                    })
+                });
+                
+                if (response.ok) {
+                    const audioBlob = await response.blob();
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    const audio = new Audio(audioUrl);
+                    
+                    audio.onended = () => {
+                        setIsSpeaking(false);
+                        setAvatarState('idle');
+                        URL.revokeObjectURL(audioUrl);
+                    };
+                    audio.onerror = () => {
+                        setIsSpeaking(false);
+                        setAvatarState('idle');
+                        URL.revokeObjectURL(audioUrl);
+                    };
+                    
+                    audio.play();
+                } else {
+                    // Fallback to browser TTS
+                    speakWithBrowserTTS(text);
+                }
+            } catch (error) {
+                console.error('Edge TTS error:', error);
+                // Fallback to browser TTS
+                speakWithBrowserTTS(text);
+            }
+        } else {
+            // Use Web Speech API (browser built-in TTS - free & reliable)
+            speakWithBrowserTTS(text);
+        }
+    };
+    
+    const speakWithBrowserTTS = (text) => {
         if ('speechSynthesis' in window) {
-            setIsSpeaking(true);
-            setAvatarState('speaking');
-            
-            // Play sound effect
-            if (soundEnabled) soundEffects.play('aiSpeaking');
-            
             // Cancel any ongoing speech
             window.speechSynthesis.cancel();
             
@@ -801,6 +847,9 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
             };
             
             window.speechSynthesis.speak(utterance);
+        } else {
+            setIsSpeaking(false);
+            setAvatarState('idle');
         }
     };
 
@@ -1763,6 +1812,54 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                                         {enableTTS ? '✅ On' : '❌ Off'}
                                     </button>
                                 </div>
+                                
+                                {enableTTS && (
+                                    <>
+                                        <div className="form-group">
+                                            <label>🎙️ Voice Engine:</label>
+                                            <div className="engine-buttons">
+                                                <button
+                                                    className={`engine-btn ${ttsEngine === 'edge' ? 'active' : ''}`}
+                                                    onClick={() => setTtsEngine('edge')}
+                                                >
+                                                    🌐 Neural AI (Premium)
+                                                </button>
+                                                <button
+                                                    className={`engine-btn ${ttsEngine === 'browser' ? 'active' : ''}`}
+                                                    onClick={() => setTtsEngine('browser')}
+                                                >
+                                                    💻 Browser (Basic)
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        {ttsEngine === 'edge' && (
+                                            <div className="form-group">
+                                                <label>🎭 AI Voice:</label>
+                                                <select 
+                                                    value={edgeVoice} 
+                                                    onChange={(e) => setEdgeVoice(e.target.value)}
+                                                    className="voice-select"
+                                                >
+                                                    <optgroup label="Female Voices">
+                                                        <option value="en-US-AriaNeural">Aria (US) - Conversational</option>
+                                                        <option value="en-US-JennyNeural">Jenny (US) - Professional</option>
+                                                        <option value="en-US-MichelleNeural">Michelle (US) - Natural</option>
+                                                        <option value="en-GB-SoniaNeural">Sonia (UK) - British</option>
+                                                        <option value="en-AU-NatashaNeural">Natasha (AU) - Australian</option>
+                                                        <option value="en-IN-NeerjaNeural">Neerja (IN) - Indian</option>
+                                                    </optgroup>
+                                                    <optgroup label="Male Voices">
+                                                        <option value="en-US-GuyNeural">Guy (US) - Conversational</option>
+                                                        <option value="en-US-DavisNeural">Davis (US) - Professional</option>
+                                                        <option value="en-US-ChristopherNeural">Christopher (US) - Formal</option>
+                                                        <option value="en-US-EricNeural">Eric (US) - Friendly</option>
+                                                    </optgroup>
+                                                </select>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
                                 
                                 <button 
                                     onClick={() => setSetupStep(2)} 
