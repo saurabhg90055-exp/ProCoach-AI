@@ -824,6 +824,145 @@
     color: rgba(0, 0, 0, 0.6);
 }
 
+/* ============== COMPREHENSIVE LIGHT THEME SUPPORT ============== */
+
+[data-theme="light"] .video-interview-summary {
+    color: #1a1a2e;
+}
+
+[data-theme="light"] .summary-header h1 {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    -webkit-background-clip: text;
+    background-clip: text;
+}
+
+[data-theme="light"] .summary-header p {
+    color: rgba(26, 26, 46, 0.6);
+}
+
+[data-theme="light"] .summary-tabs {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+[data-theme="light"] .tab-btn {
+    color: rgba(26, 26, 46, 0.6);
+}
+
+[data-theme="light"] .tab-btn:hover {
+    background: rgba(79, 70, 229, 0.08);
+    color: #4f46e5;
+}
+
+[data-theme="light"] .tab-btn.active {
+    background: #ffffff;
+    color: #4f46e5;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .stat-card,
+[data-theme="light"] .metric-card,
+[data-theme="light"] .feedback-content,
+[data-theme="light"] .trend-chart,
+[data-theme="light"] .history-item,
+[data-theme="light"] .expression-metrics {
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .score-label,
+[data-theme="light"] .stat-label,
+[data-theme="light"] .breakdown-label,
+[data-theme="light"] .metric-label {
+    color: rgba(26, 26, 46, 0.6);
+}
+
+[data-theme="light"] .score-number,
+[data-theme="light"] .stat-value,
+[data-theme="light"] .breakdown-value,
+[data-theme="light"] .metric-value {
+    color: #1a1a2e;
+}
+
+[data-theme="light"] .expression-metrics h3,
+[data-theme="light"] .metric-header span,
+[data-theme="light"] .history-question,
+[data-theme="light"] .emotion-name,
+[data-theme="light"] .emotion-percentage {
+    color: #1a1a2e;
+}
+
+[data-theme="light"] .metric-tip {
+    color: rgba(26, 26, 46, 0.5);
+}
+
+[data-theme="light"] .action-btn.secondary {
+    background: rgba(0, 0, 0, 0.03);
+    border-color: rgba(0, 0, 0, 0.1);
+    color: #374151;
+}
+
+[data-theme="light"] .action-btn.secondary:hover {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .action-btn.primary {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    box-shadow: 0 4px 16px rgba(79, 70, 229, 0.25);
+}
+
+[data-theme="light"] .action-btn.primary:hover {
+    box-shadow: 0 8px 24px rgba(79, 70, 229, 0.35);
+}
+
+[data-theme="light"] .summary-actions {
+    background: rgba(255, 255, 255, 0.8);
+}
+
+[data-theme="light"] .feedback-heading {
+    color: #1a1a2e;
+}
+
+[data-theme="light"] .feedback-text {
+    color: rgba(26, 26, 46, 0.7);
+}
+
+[data-theme="light"] .improvement-item {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+[data-theme="light"] .improvement-item h4 {
+    color: #1a1a2e;
+}
+
+[data-theme="light"] .improvement-item p {
+    color: rgba(26, 26, 46, 0.6);
+}
+
+[data-theme="light"] .score-bg {
+    stroke: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .score-circle-container {
+    color: #1a1a2e;
+}
+
+[data-theme="light"] .score-grade {
+    background: rgba(79, 70, 229, 0.1);
+    color: #4f46e5;
+}
+
+[data-theme="light"] .tab-content {
+    color: #1a1a2e;
+}
+
+[data-theme="light"] .breakdown-bar-bg {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .history-answer {
+    color: rgba(26, 26, 46, 0.7);
+}
+
 /* Dark Mode */
 [data-theme="dark"] .summary-header h1 {
     background: linear-gradient(135deg, #a78bfa, #c084fc);

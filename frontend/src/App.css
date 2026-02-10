@@ -4755,6 +4755,16 @@ input[type="file"].file-input::file-selector-button {
   color: rgba(26, 26, 46, 0.8);
 }
 
+/* Interview Container Video Mode Light Theme */
+[data-theme="light"] .interview-container.video-mode {
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 50%, #d0d5dc 100%);
+}
+
+/* Video Preview Overlay Light Theme */
+[data-theme="light"] .video-preview-overlay {
+  background: rgba(255, 255, 255, 0.9);
+}
+
 /* File Input Enhanced Light Theme */
 [data-theme="light"] input[type="file"].file-input {
   background: rgba(0, 0, 0, 0.02);

@@ -198,11 +198,10 @@ const InterviewSetup = ({
                             whileHover={{ scale: 1.03, y: -4 }}
                             whileTap={{ scale: 0.97 }}
                         >
-                            <div className="gender-icon-wrapper male" style={{ padding: 0, overflow: 'hidden' }}>
+                            <div className="gender-icon-wrapper male">
                                 <img
-                                    src="/assets/interviewer_male.png"
+                                    src="/assets/male-avatar.png"
                                     alt="Male Interviewer"
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                 />
                             </div>
                             <div className="gender-content">
@@ -217,11 +216,10 @@ const InterviewSetup = ({
                             whileHover={{ scale: 1.03, y: -4 }}
                             whileTap={{ scale: 0.97 }}
                         >
-                            <div className="gender-icon-wrapper female" style={{ padding: 0, overflow: 'hidden' }}>
+                            <div className="gender-icon-wrapper female">
                                 <img
-                                    src="/assets/interviewer_female.png"
+                                    src="/assets/female-avatar.png"
                                     alt="Female Interviewer"
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                 />
                             </div>
                             <div className="gender-content">

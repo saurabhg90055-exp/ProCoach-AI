@@ -25,12 +25,37 @@
     background: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    z-index: 100;
 }
 
 .header-left, .header-right {
     display: flex;
     align-items: center;
     gap: 1rem;
+}
+
+/* Expression Panel Toggle Wrapper - for dropdown positioning */
+.expression-panel-toggle-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+/* Expression Panel Dropdown - positioned below toggle button */
+.expression-panel-dropdown {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    z-index: 9998;
+    min-width: 280px;
+}
+
+/* Fullscreen adjustments for expression panel */
+.fullscreen .expression-panel-dropdown {
+    top: calc(100% + 0.75rem);
+    right: 0;
+    z-index: 10000;
 }
 
 .session-info {
@@ -1035,4 +1060,141 @@
 [data-theme="light"] .model-loading-indicator {
     background: rgba(255, 255, 255, 0.9);
     color: #7c3aed;
+}
+
+/* Light theme - Interviewer Panel */
+[data-theme="light"] .interviewer-panel {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .interviewer-info h3 {
+    color: #1a1a2e;
+}
+
+[data-theme="light"] .interviewer-info .status {
+    color: rgba(26, 26, 46, 0.6);
+}
+
+[data-theme="light"] .current-question {
+    background: rgba(99, 102, 241, 0.08);
+    border-color: rgba(99, 102, 241, 0.15);
+}
+
+[data-theme="light"] .current-question p {
+    color: #1a1a2e;
+}
+
+/* Light theme - Transcript/Conversation Panel */
+[data-theme="light"] .transcript-panel {
+    background: rgba(255, 255, 255, 0.95);
+    border-top-color: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .transcript-header {
+    background: rgba(0, 0, 0, 0.03);
+    color: #1a1a2e;
+}
+
+[data-theme="light"] .collapse-btn {
+    color: rgba(26, 26, 46, 0.5);
+}
+
+[data-theme="light"] .transcript-content {
+    background: rgba(255, 255, 255, 0.9);
+}
+
+[data-theme="light"] .transcript-msg {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+[data-theme="light"] .transcript-msg p {
+    color: #374151;
+}
+
+[data-theme="light"] .transcript-msg.assistant {
+    background: rgba(99, 102, 241, 0.08);
+    border-color: rgba(99, 102, 241, 0.15);
+}
+
+[data-theme="light"] .show-transcript-btn {
+    background: rgba(0, 0, 0, 0.03);
+    color: rgba(26, 26, 46, 0.6);
+}
+
+[data-theme="light"] .show-transcript-btn:hover {
+    background: rgba(0, 0, 0, 0.06);
+    color: #1a1a2e;
+}
+
+[data-theme="light"] .transcript-msg .msg-role {
+    color: #374151;
+}
+
+[data-theme="light"] .transcript-msg.user {
+    background: rgba(16, 185, 129, 0.08);
+    border-color: rgba(16, 185, 129, 0.15);
+}
+
+[data-theme="light"] .transcript-msg .msg-score {
+    background: rgba(99, 102, 241, 0.1);
+    color: #6366f1;
+}
+
+[data-theme="light"] .collapse-btn:hover {
+    color: #1a1a2e;
+}
+
+/* Light theme - Expression Stats */
+[data-theme="light"] .expression-stats {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .expression-stats .stat-label {
+    color: rgba(26, 26, 46, 0.5);
+}
+
+[data-theme="light"] .expression-stats .stat-value {
+    color: #1a1a2e;
+}
+
+[data-theme="light"] .expression-stats .stat-bar {
+    background: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .expression-stats .emotion-label {
+    color: rgba(26, 26, 46, 0.7);
+}
+
+/* Light theme - Video Wrapper */
+[data-theme="light"] .video-wrapper {
+    border-color: rgba(99, 102, 241, 0.3);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .camera-off-placeholder {
+    background: linear-gradient(135deg, #e4e8eb 0%, #d0d5dc 100%);
+    color: rgba(26, 26, 46, 0.5);
+}
+
+[data-theme="light"] .recording-badge {
+    background: rgba(239, 68, 68, 0.95);
+}
+
+/* Light theme - User Panel */
+[data-theme="light"] .user-panel {
+    background: transparent;
+}
+
+/* Light theme - Question Badge */
+[data-theme="light"] .question-badge {
+    background: rgba(139, 92, 246, 0.1);
+    color: #7c3aed;
+}
+
+/* Light theme - Score Indicator */
+[data-theme="light"] .score-indicator {
+    background: rgba(34, 197, 94, 0.1);
+    color: #16a34a;
 }

@@ -437,13 +437,34 @@ const VideoInterview = ({
                     >
                         {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
                     </button>
-                    <button
-                        className={`icon-btn ${showExpressionPanel ? 'active' : ''}`}
-                        onClick={() => setShowExpressionPanel(!showExpressionPanel)}
-                        title={showExpressionPanel ? 'Hide Expression Panel' : 'Show Expression Panel'}
-                    >
-                        <BarChart3 size={18} />
-                    </button>
+                    <div className="expression-panel-toggle-wrapper">
+                        <button
+                            className={`icon-btn ${showExpressionPanel ? 'active' : ''}`}
+                            onClick={() => setShowExpressionPanel(!showExpressionPanel)}
+                            title={showExpressionPanel ? 'Hide Expression Panel' : 'Show Expression Panel'}
+                        >
+                            <BarChart3 size={18} />
+                        </button>
+                        {/* Expression Panel - Dropdown from header */}
+                        <AnimatePresence>
+                            {showExpressionPanel && (
+                                <motion.div
+                                    className="expression-panel-dropdown"
+                                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    <ExpressionPanel
+                                        expressionData={expressionData}
+                                        faceDetected={faceDetected}
+                                        isRecording={isRecording}
+                                        compact={false}
+                                    />
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
                 </div>
             </div>
             
@@ -583,15 +604,7 @@ const VideoInterview = ({
                         )}
                     </div>
                     
-                    {/* Expression Stats - Basic or Enhanced */}
-                    {showExpressionPanel ? (
-                        <ExpressionPanel
-                            expressionData={expressionData}
-                            faceDetected={faceDetected}
-                            isRecording={isRecording}
-                            compact={false}
-                        />
-                    ) : (
+                    {/* Expression Stats - Always show compact bar in user panel */}
                     <div className="expression-stats">
                         <div className="stat-item">
                             <Eye size={14} />
@@ -626,7 +639,6 @@ const VideoInterview = ({
                             <span className="emotion-label">{expressionData.emotion}</span>
                         </div>
                     </div>
-                    )}
                 </div>
             </div>
             
