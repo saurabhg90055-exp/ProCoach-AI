@@ -132,7 +132,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
         
         const info = {
             gender: interviewerGender,
-            name: voiceNames[edgeVoice] || (interviewerGender === 'female' ? 'ARIA' : 'ALEX')
+            name: voiceNames[edgeVoice] || (interviewerGender === 'female' ? 'ARIA' : 'Saurabh')
         };
         console.log('[AudioRecorder] avatarInfo computed:', info, 'interviewerGender:', interviewerGender);
         return info;

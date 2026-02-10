@@ -64,7 +64,7 @@ const InterviewSetup = ({
         >
             {/* Welcome Header */}
             <motion.div className="setup-header" variants={itemVariants}>
-                <motion.div 
+                <motion.div
                     className="welcome-badge"
                     whileHover={{ scale: 1.05 }}
                 >
@@ -158,9 +158,9 @@ const InterviewSetup = ({
                             </div>
                         </motion.button>
                     </div>
-                    
+
                     {interviewMode === 'video' && (
-                        <motion.div 
+                        <motion.div
                             className="video-mode-info"
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
@@ -198,12 +198,16 @@ const InterviewSetup = ({
                             whileHover={{ scale: 1.03, y: -4 }}
                             whileTap={{ scale: 0.97 }}
                         >
-                            <div className="gender-icon-wrapper male">
-                                <span className="gender-emoji">👨‍💼</span>
+                            <div className="gender-icon-wrapper male" style={{ padding: 0, overflow: 'hidden' }}>
+                                <img
+                                    src="/assets/interviewer_male.png"
+                                    alt="Male Interviewer"
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                />
                             </div>
                             <div className="gender-content">
                                 <span className="gender-name">Male Interviewer</span>
-                                <span className="gender-desc">Professional male AI interviewer</span>
+                                <span className="gender-desc">Professional AI interviewer (Saurabh)</span>
                             </div>
                         </motion.button>
 
@@ -213,8 +217,12 @@ const InterviewSetup = ({
                             whileHover={{ scale: 1.03, y: -4 }}
                             whileTap={{ scale: 0.97 }}
                         >
-                            <div className="gender-icon-wrapper female">
-                                <span className="gender-emoji">👩‍💼</span>
+                            <div className="gender-icon-wrapper female" style={{ padding: 0, overflow: 'hidden' }}>
+                                <img
+                                    src="/assets/interviewer_female.png"
+                                    alt="Female Interviewer"
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                />
                             </div>
                             <div className="gender-content">
                                 <span className="gender-name">Female Interviewer</span>
@@ -230,7 +238,7 @@ const InterviewSetup = ({
                         <Target className="label-icon" />
                         Interview Topic
                     </label>
-                    <motion.div 
+                    <motion.div
                         className="select-wrapper"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
@@ -322,9 +330,9 @@ const InterviewSetup = ({
                     )}
                     <ChevronRight className="btn-icon" />
                 </motion.button>
-                
+
                 <p className="setup-tip">
-                    {interviewMode === 'video' 
+                    {interviewMode === 'video'
                         ? '📹 Tip: Ensure good lighting and look directly at your camera'
                         : '💡 Tip: Practice regularly to improve your interview performance'
                     }

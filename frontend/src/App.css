@@ -4107,13 +4107,28 @@ input[type="file"].file-input::file-selector-button {
 }
 
 [data-theme="light"] .progress-step .step-number {
-  color: #6b7280;
-  background: rgba(0, 0, 0, 0.05);
+  /* color: #6b7280;
+  background: rgba(255, 255, 255, 0); */
+   width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0);
+  border-radius: 50%;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255,0);
+  transition: all 0.3s ease;
+  line-height: 1;
+  text-align: center;
 }
 
 [data-theme="light"] .progress-step.active .step-number {
-  color: #fff;
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  /* color: #fff;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); */
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: white;
 }
 
 [data-theme="light"] .progress-step .step-label {
