@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { 
-    Sparkles, ChevronRight, Users, Target, TrendingUp, Award,
+    ChevronRight, Users, Target, TrendingUp, Award,
     Mic, Brain, BarChart2, Shield, Zap, Star, Play, ArrowRight,
     CheckCircle, MessageSquare, Clock
 } from 'lucide-react';
@@ -108,14 +108,12 @@ const LandingPage = ({ onStartSetup, stats }) => {
                             whileHover={{ scale: 1.05 }}
                             animate={floatingAnimation}
                         >
-                            <Sparkles className="badge-icon" />
                             <span>AI-Powered Interview Coach</span>
                         </motion.div>
 
                         <h1 className="hero-title">
                             <span className="title-line-1">Welcome to</span>
                             <span className="title-brand">
-                                <Sparkles className="brand-icon" />
                                 ProCoach AI
                             </span>
                         </h1>
@@ -334,7 +332,6 @@ const LandingPage = ({ onStartSetup, stats }) => {
             {/* Footer */}
             <footer className="landing-footer">
                 <div className="footer-brand">
-                    <Sparkles size={20} />
                     <span>ProCoach AI</span>
                 </div>
                 <p className="footer-copyright">© 2026 ProCoach AI. All rights reserved.</p>

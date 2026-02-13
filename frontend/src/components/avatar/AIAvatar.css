@@ -529,6 +529,49 @@
   border-radius: 50%;
 }
 
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .ai-avatar-wrapper.size-large {
+    width: 140px;
+    height: 140px;
+  }
+  
+  .ai-avatar-wrapper.size-medium {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .ai-avatar-wrapper.size-small {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .holo-ring.ring-2,
+  .holo-ring.ring-3 {
+    display: none;
+  }
+  
+  .status-text {
+    font-size: 0.65rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .ai-avatar-wrapper.size-large {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .ai-avatar-wrapper.size-medium {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .holo-ring {
+    display: none;
+  }
+}
+
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
   .holo-ring,

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     TrendingUp, Target, Clock, Award, CheckCircle, XCircle, 
-    ChevronRight, RotateCcw, Download, Share2, Sparkles, LogIn, Save,
+    ChevronRight, RotateCcw, Download, Share2, LogIn, Save,
     Eye, Zap, Brain, Heart, Video, BarChart2, Activity,
     ThumbsUp, AlertTriangle, Star
 } from 'lucide-react';
@@ -149,7 +149,7 @@ const VideoInterviewSummary = ({
                     <Video size={20} />
                     <span>Video Interview</span>
                 </div>
-                <Sparkles className="header-icon" />
+                <Star className="header-icon" />
                 <h1>Interview Complete!</h1>
                 <p>{scoreInfo.message}</p>
             </motion.div>

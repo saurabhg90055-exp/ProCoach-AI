@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Camera, RefreshCw, ZoomIn, ZoomOut, Sun, Moon, 
-    Sparkles, Image, X, Check, Sliders, RotateCcw
+    Star, Image, X, Check, Sliders, RotateCcw
 } from 'lucide-react';
 import './CameraControls.css';
 
@@ -302,7 +302,7 @@ const CameraControls = ({
                                 {/* Virtual Backgrounds */}
                                 <div className="control-section">
                                     <label className="control-label">
-                                        <Sparkles size={14} />
+                                        <Star size={14} />
                                         Background
                                     </label>
                                     <div className="background-grid">
@@ -315,7 +315,7 @@ const CameraControls = ({
                                                 style={bg.type === 'gradient' ? { background: bg.value } : {}}
                                             >
                                                 {bg.type === 'none' && <X size={16} />}
-                                                {bg.type === 'blur' && <Sparkles size={16} />}
+                                                {bg.type === 'blur' && <Star size={16} />}
                                                 {bg.type === 'image' && <Image size={16} />}
                                                 <span className="bg-label">{bg.name}</span>
                                             </button>

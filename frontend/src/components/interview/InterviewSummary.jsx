@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
     TrendingUp, Target, Clock, Award, CheckCircle, XCircle, 
-    ChevronRight, RotateCcw, Download, Share2, Sparkles, LogIn, Save 
+    ChevronRight, RotateCcw, Download, Share2, Star, LogIn, Save 
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { interviewAPI } from '../../services/api';
@@ -66,7 +66,7 @@ const InterviewSummary = ({
         >
             {/* Header */}
             <motion.div className="summary-header" variants={itemVariants}>
-                <Sparkles className="header-icon" />
+                <Star className="header-icon" />
                 <h1>Interview Complete!</h1>
                 <p>{scoreInfo.message}</p>
             </motion.div>

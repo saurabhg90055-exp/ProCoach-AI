@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, TrendingUp, Target, Award, AlertCircle, Lightbulb } from 'lucide-react';
+import { Brain, TrendingUp, Target, Award, AlertCircle, Lightbulb } from 'lucide-react';
 import './AIInsightsPanel.css';
 
 const AIInsightsPanel = ({ 
@@ -61,14 +61,14 @@ const AIInsightsPanel = ({
             case 'focus': return Target;
             case 'warning': return AlertCircle;
             case 'tip': return Lightbulb;
-            default: return Sparkles;
+            default: return Brain;
         }
     };
     
     return (
         <div className="ai-insights-panel">
             <div className="insights-header">
-                <Sparkles size={20} />
+                <Brain size={20} />
                 <h3>AI Insights</h3>
                 <span className="ai-badge">Powered by AI</span>
             </div>

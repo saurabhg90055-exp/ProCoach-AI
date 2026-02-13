@@ -5250,3 +5250,557 @@ input[type="file"].file-input::file-selector-button {
 [data-theme="light"] .interviewer-voice {
   color: rgba(0, 0, 0, 0.5);
 }
+
+/* ============================================
+   PHASE 1 & 2: COMPREHENSIVE MOBILE RESPONSIVE
+   ============================================ */
+
+/* Mobile-first responsive utilities */
+.mobile-only {
+  display: none;
+}
+
+.desktop-only {
+  display: block;
+}
+
+/* ============================================
+   TABLET BREAKPOINT (max-width: 1024px)
+   ============================================ */
+@media (max-width: 1024px) {
+  /* App Header - Tablet */
+  .app-header {
+    padding: 0.75rem 1.5rem;
+  }
+  
+  .logo-text {
+    font-size: 1.1rem;
+  }
+  
+  .nav-btn {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  /* Interview Grid - already handled above */
+  
+  /* Chat container adjustments */
+  .chat-container {
+    max-height: 45vh;
+  }
+  
+  /* Recording controls */
+  .recording-controls {
+    padding: 1rem;
+  }
+}
+
+/* ============================================
+   MOBILE BREAKPOINT (max-width: 768px)
+   ============================================ */
+@media (max-width: 768px) {
+  /* Show/hide utilities */
+  .mobile-only {
+    display: block;
+  }
+  
+  .desktop-only {
+    display: none;
+  }
+  
+  /* Root and body adjustments */
+  html, body {
+    overflow-x: hidden;
+  }
+  
+  /* App Header - Mobile */
+  .app-header {
+    padding: 0.5rem 1rem;
+    flex-wrap: wrap;
+    height: auto;
+    min-height: auto;
+    max-height: none;
+    gap: 0.5rem;
+  }
+  
+  .logo-section {
+    flex: 1;
+    min-width: auto;
+  }
+  
+  .logo-icon {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .logo-text {
+    font-size: 1rem;
+  }
+  
+  .main-nav {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    padding: 0.5rem 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin-top: 0.5rem;
+  }
+  
+  .nav-btn {
+    padding: 0.6rem;
+    flex: 1;
+    max-width: 80px;
+    justify-content: center;
+  }
+  
+  .nav-btn span {
+    display: none;
+  }
+  
+  .header-actions {
+    gap: 0.5rem;
+  }
+  
+  .settings-btn,
+  .user-btn,
+  .login-btn,
+  .logout-btn {
+    padding: 0.5rem;
+    min-width: 40px;
+    justify-content: center;
+  }
+  
+  .user-btn span,
+  .login-btn span,
+  .logout-btn span {
+    display: none;
+  }
+  
+  /* Interview Container - Mobile */
+  .interview-container {
+    min-height: auto;
+    padding: 0.5rem;
+  }
+  
+  /* Interview Main Grid - Mobile: Single column */
+  .interview-main-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    min-height: auto;
+  }
+  
+  /* Avatar Panel - Compact on mobile */
+  .avatar-panel {
+    position: relative;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  /* Mobile Avatar: Smaller, centered */
+  .ai-avatar-section {
+    width: 100%;
+    max-width: 280px;
+    padding: 1rem;
+    margin: 0 auto;
+  }
+  
+  .ai-avatar-section .avatar-wrapper {
+    width: 120px;
+    height: 120px;
+  }
+  
+  /* Content Panel - Mobile */
+  .content-panel {
+    gap: 0.75rem;
+  }
+  
+  /* Chat Container - Mobile optimized */
+  .chat-container {
+    max-height: 35vh;
+    min-height: 200px;
+    padding: 0.75rem;
+    border-radius: 10px;
+  }
+  
+  /* Messages - Mobile */
+  .message {
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .message-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+  
+  .message-content {
+    max-width: 85%;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.9rem;
+  }
+  
+  .message-role {
+    font-size: 0.7rem;
+  }
+  
+  /* Recording Controls - Mobile: Fixed bottom bar style */
+  .recording-controls {
+    position: sticky;
+    bottom: 0;
+    padding: 0.75rem 1rem;
+    margin: 0 -0.5rem -0.5rem;
+    border-radius: 16px 16px 0 0;
+    background: rgba(20, 20, 45, 0.98);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 50;
+  }
+  
+  .btn-record,
+  .btn-recording {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    width: 100%;
+    max-width: 280px;
+  }
+  
+  /* Audio playback - Mobile */
+  .audio-playback {
+    max-width: 100%;
+  }
+  
+  /* Interview Header - Mobile */
+  .interview-header {
+    padding: 0.75rem;
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: stretch;
+  }
+  
+  .header-info {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+  
+  .topic-badge {
+    font-size: 0.7rem;
+    padding: 0.3rem 0.6rem;
+  }
+  
+  .question-count {
+    font-size: 0.8rem;
+  }
+  
+  /* Timer section - Mobile */
+  .timer-section {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  /* Score Display - Mobile */
+  .score-display {
+    font-size: 0.9rem;
+  }
+  
+  /* Setup Card - Mobile */
+  .setup-card {
+    padding: 1.25rem;
+    margin: 0.5rem;
+    border-radius: 12px;
+  }
+  
+  .setup-card h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  /* Form elements - Mobile */
+  .setup-form {
+    gap: 0.75rem;
+  }
+  
+  .form-group {
+    margin-bottom: 0.75rem;
+  }
+  
+  .form-group label {
+    font-size: 0.85rem;
+  }
+  
+  .topic-select,
+  .form-select,
+  select {
+    padding: 0.6rem;
+    font-size: 0.9rem;
+  }
+  
+  /* Difficulty buttons - Mobile */
+  .difficulty-buttons {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .difficulty-btn {
+    padding: 0.6rem 1rem;
+  }
+  
+  /* Duration buttons - Mobile */
+  .duration-buttons {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+  }
+  
+  .duration-btn {
+    flex: 1;
+    min-width: 80px;
+    padding: 0.6rem;
+  }
+  
+  /* Setup progress - Mobile */
+  .setup-progress {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+  
+  .setup-progress .step {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.7rem;
+  }
+  
+  .setup-progress .step-divider {
+    display: none;
+  }
+  
+  /* Summary Card - Mobile */
+  .summary-card {
+    padding: 1.25rem;
+    margin: 0.5rem;
+  }
+  
+  .summary-header {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .score-summary {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  /* Visualizer - Mobile */
+  .audio-visualizer-container {
+    height: 60px;
+  }
+  
+  .visualizer-mode-selector {
+    gap: 0.25rem;
+  }
+  
+  .mode-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
+  }
+  
+  /* Coaching Panel - Mobile overlay */
+  .coaching-panel {
+    position: fixed;
+    inset: 0;
+    margin: 0;
+    border-radius: 0;
+    z-index: 100;
+    overflow-y: auto;
+  }
+  
+  /* Analytics Panel - Mobile */
+  .analytics-panel {
+    padding: 1rem;
+  }
+}
+
+/* ============================================
+   SMALL MOBILE BREAKPOINT (max-width: 480px)
+   ============================================ */
+@media (max-width: 480px) {
+  /* Even smaller adjustments */
+  .app-header {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .logo-icon {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .logo-text {
+    font-size: 0.9rem;
+  }
+  
+  .nav-btn {
+    padding: 0.5rem;
+    max-width: 60px;
+  }
+  
+  .nav-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+  
+  /* Chat container - Very small screens */
+  .chat-container {
+    max-height: 30vh;
+    min-height: 150px;
+    padding: 0.5rem;
+  }
+  
+  .message-content {
+    max-width: 90%;
+    padding: 0.5rem 0.7rem;
+    font-size: 0.85rem;
+  }
+  
+  .message-avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 0.9rem;
+  }
+  
+  /* Avatar - Very small */
+  .ai-avatar-section {
+    max-width: 240px;
+    padding: 0.75rem;
+  }
+  
+  .ai-avatar-section .avatar-wrapper {
+    width: 100px;
+    height: 100px;
+  }
+  
+  /* Recording controls - Compact */
+  .recording-controls {
+    padding: 0.6rem 0.75rem;
+  }
+  
+  .btn-record,
+  .btn-recording {
+    padding: 0.65rem 1.25rem;
+    font-size: 0.9rem;
+  }
+  
+  /* Setup Card - Very small */
+  .setup-card {
+    padding: 1rem;
+    margin: 0.25rem;
+  }
+  
+  .setup-card h2 {
+    font-size: 1.3rem;
+  }
+  
+  /* Buttons - Compact */
+  .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+  }
+  
+  .btn-primary {
+    padding: 0.6rem 1.25rem;
+  }
+  
+  /* Score display - Compact */
+  .score-circle-container .score-circle {
+    width: 120px;
+    height: 120px;
+  }
+}
+
+/* ============================================
+   LANDSCAPE MODE ADJUSTMENTS
+   ============================================ */
+@media (max-height: 500px) and (orientation: landscape) {
+  /* Landscape mobile - reduce vertical space */
+  .app-header {
+    padding: 0.4rem 1rem;
+    min-height: auto;
+  }
+  
+  .chat-container {
+    max-height: 35vh;
+    min-height: 120px;
+  }
+  
+  .ai-avatar-section {
+    padding: 0.5rem;
+  }
+  
+  .ai-avatar-section .avatar-wrapper {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .recording-controls {
+    padding: 0.5rem;
+    flex-direction: row;
+    justify-content: center;
+  }
+  
+  .btn-record,
+  .btn-recording {
+    padding: 0.5rem 1.5rem;
+    width: auto;
+  }
+}
+
+/* ============================================
+   SAFE AREA INSETS (for notched devices)
+   ============================================ */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .app-header {
+    padding-top: max(0.5rem, env(safe-area-inset-top));
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+  
+  .recording-controls {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+}
+
+/* ============================================
+   MOBILE TOUCH OPTIMIZATIONS
+   ============================================ */
+@media (pointer: coarse) {
+  /* Increase tap targets for touch devices */
+  .btn,
+  .nav-btn,
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .nav-btn {
+    padding: 0.75rem;
+  }
+  
+  .difficulty-btn,
+  .duration-btn,
+  .topic-option {
+    min-height: 48px;
+  }
+  
+  /* Remove hover effects on touch devices */
+  .btn:hover,
+  .nav-btn:hover,
+  .feature-card:hover,
+  .step-card:hover {
+    transform: none;
+  }
+}

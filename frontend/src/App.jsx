@@ -11,7 +11,7 @@ import { useKeyboardShortcuts, KeyboardShortcutsHelp } from './hooks/useKeyboard
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider, useToast } from './contexts/ToastContext';
 import { AuthModal } from './components/auth';
-import { Settings, BarChart2, Home, Trophy, Sparkles, LogIn, LogOut, User, Rocket } from 'lucide-react';
+import { Settings, BarChart2, Home, Trophy, Star, LogIn, LogOut, User, Rocket } from 'lucide-react';
 import './App.css';
 import './components/gamification/XPSystem.css';
 import './components/theme/ThemeProvider.css';
@@ -312,7 +312,7 @@ function AppContent() {
           whileHover={{ scale: 1.02 }}
           onClick={() => setCurrentView('landing')}
         >
-          <Sparkles className="logo-icon" />
+          <Star className="logo-icon" />
           <span className="logo-text">ProCoach AI</span>
         </motion.div>
 

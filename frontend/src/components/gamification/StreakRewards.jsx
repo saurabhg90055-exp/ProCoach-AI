@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Flame, Gift, Lock, Check, Star, Sparkles } from 'lucide-react';
+import { Flame, Gift, Lock, Check, Star, Award } from 'lucide-react';
 import './StreakRewards.css';
 
 const StreakRewards = ({ 
@@ -16,7 +16,7 @@ const StreakRewards = ({
         { day: 7, reward: 'Interview Tips Pack', icon: Gift, type: 'content' },
         { day: 14, reward: '100 Bonus XP', icon: Star, type: 'xp' },
         { day: 21, reward: 'Premium Question Set', icon: Gift, type: 'content' },
-        { day: 30, reward: 'Streak Master Badge', icon: Sparkles, type: 'badge' }
+        { day: 30, reward: 'Streak Master Badge', icon: Award, type: 'badge' }
     ];
     
     const handleClaim = async (reward) => {

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     ChevronDown, ChevronUp, MessageSquare, 
-    Sparkles, Clock, BarChart3 
+    Star, Clock, BarChart3 
 } from 'lucide-react';
 import './TopicPreview.css';
 
@@ -157,7 +157,7 @@ const TopicPreview = ({ topics = [], onTopicSelect, selectedTopics = [] }) => {
                                         
                                         <div className="sample-questions">
                                             <h5>
-                                                <Sparkles size={14} />
+                                                <Star size={14} />
                                                 Sample Questions
                                             </h5>
                                             <ul>

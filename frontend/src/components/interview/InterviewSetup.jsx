@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, Briefcase, Target, Zap, ChevronRight, Sparkles, Brain, Trophy, Star, Mic, Video, Camera, Eye, Shield, User } from 'lucide-react';
+import { Settings, Briefcase, Target, Zap, ChevronRight, Brain, Trophy, Star, Mic, Video, Camera, Eye, Shield, User } from 'lucide-react';
 import './InterviewSetup.css';
 
 const InterviewSetup = ({
@@ -68,7 +68,6 @@ const InterviewSetup = ({
                     className="welcome-badge"
                     whileHover={{ scale: 1.05 }}
                 >
-                    <Sparkles className="sparkle-icon" />
                     <span>ProCoach AI</span>
                 </motion.div>
                 <h1 className="setup-title">
@@ -153,7 +152,7 @@ const InterviewSetup = ({
                                 <span className="feature-tag">👁️ Eye Contact</span>
                             </div>
                             <div className="mode-badge premium">
-                                <Sparkles size={12} />
+                                <Star size={12} />
                                 <span>Pro Features</span>
                             </div>
                         </motion.button>
