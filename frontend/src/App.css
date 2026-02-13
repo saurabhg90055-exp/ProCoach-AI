@@ -7,6 +7,29 @@
   --border-color: rgba(255, 255, 255, 0.1);
 }
 
+/* Global Smooth Scrolling and Rendering */
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+/* Global Performance Optimizations */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Smooth transitions for interactive elements */
+button, a, .btn, .nav-btn, .card, [class*="card"], [class*="btn"] {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 /* Fix SVG icon visibility - ensure icons inherit color properly */
 svg {
   display: inline-block;
@@ -44,6 +67,7 @@ button svg,
   color: var(--color-text, var(--text-primary));
   position: relative;
   z-index: 1;
+  overflow-x: hidden;
 }
 
 /* Simple Gradient Background */
@@ -346,7 +370,7 @@ button svg,
   position: sticky;
   top: 0;
   z-index: 100;
-  width: 100vw;
+  width: 100%;
   box-sizing: border-box;
   height: 72px;
   min-height: 72px;
@@ -3238,6 +3262,18 @@ button svg,
   }
   
   .avatar-panel {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    padding: 0.5rem;
+  }
+  
+  .avatar-panel .ai-avatar-section {
+    max-width: 150px;
+    padding: 0.5rem;
+  }
+  
+  .avatar-name-badge {
     display: none;
   }
 }
@@ -5794,13 +5830,5 @@ input[type="file"].file-input::file-selector-button {
   .duration-btn,
   .topic-option {
     min-height: 48px;
-  }
-  
-  /* Remove hover effects on touch devices */
-  .btn:hover,
-  .nav-btn:hover,
-  .feature-card:hover,
-  .step-card:hover {
-    transform: none;
   }
 }

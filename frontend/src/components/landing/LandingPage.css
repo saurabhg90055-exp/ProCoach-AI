@@ -1052,10 +1052,4 @@
     .testimonial-card {
         cursor: default;
     }
-    
-    .feature-card:hover,
-    .step-card:hover,
-    .testimonial-card:hover {
-        transform: none;
-    }
 }
