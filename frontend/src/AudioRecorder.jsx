@@ -952,7 +952,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
         if (soundEnabled) soundEffects.play('aiSpeaking');
         
         if (ttsEngine === 'edge') {
-            // Use Edge TTS with streaming audio for faster playback
+            // Use Edge TTS - wait for complete audio before playing
             try {
                 const response = await fetch(`${API_URL}/tts/edge`, {
                     method: 'POST',
@@ -964,31 +964,20 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                 });
                 
                 if (response.ok && response.body) {
-                    // Use streaming approach for faster audio playback
+                    // Collect all chunks first to ensure complete audio playback
                     const reader = response.body.getReader();
                     const chunks = [];
                     
-                    // Read chunks as they arrive
-                    let firstChunkReceived = false;
+                    // Read all chunks until done
                     while (true) {
                         const { done, value } = await reader.read();
                         if (done) break;
                         chunks.push(value);
-                        
-                        // Start playing as soon as we have enough data (~50KB minimum for smooth playback)
-                        if (!firstChunkReceived && chunks.reduce((sum, c) => sum + c.length, 0) > 50000) {
-                            firstChunkReceived = true;
-                            // Create blob from what we have and start playing
-                            const partialBlob = new Blob(chunks, { type: 'audio/mpeg' });
-                            playAudioBlob(partialBlob, false);
-                        }
                     }
                     
-                    // If we never got enough data for early playback, play the full audio now
-                    if (!firstChunkReceived) {
-                        const audioBlob = new Blob(chunks, { type: 'audio/mpeg' });
-                        playAudioBlob(audioBlob, true);
-                    }
+                    // Play the complete audio
+                    const audioBlob = new Blob(chunks, { type: 'audio/mpeg' });
+                    playAudioBlob(audioBlob, true);
                 } else {
                     // Fallback to browser TTS
                     speakWithBrowserTTS(text);
@@ -1054,14 +1043,44 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                 utterance.voice = englishVoice;
             }
             
-            utterance.onend = () => {
+            // Chrome bug workaround: Chrome pauses speech synthesis after ~15 seconds
+            // Keep speech alive with periodic resume calls
+            let keepAliveInterval = null;
+            const startKeepAlive = () => {
+                keepAliveInterval = setInterval(() => {
+                    if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
+                        // Keep the synthesis alive
+                        window.speechSynthesis.pause();
+                        window.speechSynthesis.resume();
+                    }
+                }, 10000); // Every 10 seconds
+            };
+            
+            const cleanup = () => {
+                if (keepAliveInterval) {
+                    clearInterval(keepAliveInterval);
+                    keepAliveInterval = null;
+                }
                 setIsSpeaking(false);
                 setAvatarState('idle');
             };
-            utterance.onerror = () => {
-                setIsSpeaking(false);
-                setAvatarState('idle');
+            
+            utterance.onstart = () => {
+                startKeepAlive();
             };
+            
+            utterance.onend = cleanup;
+            utterance.onerror = cleanup;
+            
+            // Safety timeout: reset speaking state after a reasonable max duration
+            // Estimate ~150 words per minute, average word is 5 chars
+            const estimatedDuration = Math.max(10000, (text.length / 5) * 400 + 5000);
+            setTimeout(() => {
+                if (window.speechSynthesis.speaking) {
+                    window.speechSynthesis.cancel();
+                }
+                cleanup();
+            }, estimatedDuration);
             
             window.speechSynthesis.speak(utterance);
         } else {

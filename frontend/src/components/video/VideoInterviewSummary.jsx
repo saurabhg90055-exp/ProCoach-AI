@@ -218,7 +218,7 @@ const VideoInterviewSummary = ({
                                     </svg>
                                     <div className="score-content">
                                         <span className="score-value">{combinedScore}</span>
-                                        <span className="score-label">Combined</span>
+                                        {/* <span className="score-label">Combined</span> */}
                                     </div>
                                 </div>
                                 <div className="score-grade" style={{ backgroundColor: `${scoreInfo.color}20`, color: scoreInfo.color }}>

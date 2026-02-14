@@ -10,12 +10,12 @@
 /* Hero Section */
 .hero-section {
     position: relative;
-    min-height: 90vh;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: 4rem 2rem;
+    justify-content: flex-start;
+    padding: 2rem 2rem 3rem;
     overflow: hidden;
 }
 
@@ -45,10 +45,11 @@
 .hero-illustration-right {
     flex: 1;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
-    min-height: 450px;
+    min-height: 400px;
     position: relative;
+    margin-top: -20px;
 }
 
 .hero-badge {

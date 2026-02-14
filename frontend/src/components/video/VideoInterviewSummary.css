@@ -149,7 +149,7 @@
 }
 
 .score-bg {
-    stroke: var(--bg-secondary, #f90202);
+    stroke: rgba(255, 255, 255, 0.1);
 }
 
 .score-progress {
@@ -158,10 +158,7 @@
 
 .score-content {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
+    inset: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -172,15 +169,15 @@
     font-size: 2.5rem;
     font-weight: 700;
     line-height: 1;
-    color: var(--score-color);
-    line-height: 1;
+    color: var(--text-primary, #fff);
 }
 
 .score-label {
-    font-size: 0.65rem;
-    color: var(--text-secondary, #f8f400);
+    font-size: 0.75rem;
+    color: var(--text-secondary, rgba(255, 255, 255, 0.7));
     margin-top: 0.25rem;
-    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
 .score-grade {
