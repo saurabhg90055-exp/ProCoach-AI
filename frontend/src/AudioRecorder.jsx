@@ -887,8 +887,11 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
     const fetchAndPlayTTS = async (text) => {
         if (!enableTTS || !text) return;
         
+        console.log('[TTS] Starting TTS for text length:', text.length, 'engine:', ttsEngine);
+        
         if (ttsEngine === 'edge') {
             try {
+                console.log('[TTS] Fetching from:', `${API_URL}/tts/edge`);
                 const response = await fetch(`${API_URL}/tts/edge`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -898,8 +901,18 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                     })
                 });
                 
+                console.log('[TTS] Response status:', response.status, 'ok:', response.ok);
+                
                 if (response.ok) {
                     const audioBlob = await response.blob();
+                    console.log('[TTS] Audio blob size:', audioBlob.size);
+                    
+                    if (audioBlob.size < 100) {
+                        console.warn('[TTS] Audio blob too small, falling back to browser TTS');
+                        speakWithBrowserTTS(text);
+                        return true;
+                    }
+                    
                     const audioUrl = URL.createObjectURL(audioBlob);
                     const audio = new Audio(audioUrl);
                     audio.preload = 'auto';
@@ -908,30 +921,42 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                     setIsSpeaking(true);
                     setAvatarState('speaking');
                     if (soundEnabled) soundEffects.play('aiSpeaking');
+                    console.log('[TTS] Speaking state set to true, avatar state: speaking');
                     
                     audio.onended = () => {
+                        console.log('[TTS] Audio ended');
                         setIsSpeaking(false);
                         setAvatarState('idle');
                         URL.revokeObjectURL(audioUrl);
                     };
-                    audio.onerror = () => {
+                    audio.onerror = (e) => {
+                        console.error('[TTS] Audio error:', e);
                         setIsSpeaking(false);
                         setAvatarState('idle');
                         URL.revokeObjectURL(audioUrl);
+                        // Try browser TTS as fallback
+                        speakWithBrowserTTS(text);
                     };
                     
                     // Play and return - audio will start as soon as buffer allows
-                    await audio.play().catch(() => {
+                    try {
+                        await audio.play();
+                        console.log('[TTS] Audio playing successfully');
+                    } catch (playError) {
+                        console.error('[TTS] Play error:', playError);
                         setIsSpeaking(false);
                         setAvatarState('idle');
-                    });
+                        // Fallback to browser TTS
+                        speakWithBrowserTTS(text);
+                    }
                     return true;
                 } else {
+                    console.warn('[TTS] Edge TTS response not ok, falling back to browser TTS');
                     speakWithBrowserTTS(text);
                     return true;
                 }
             } catch (error) {
-                console.error('Edge TTS error:', error);
+                console.error('[TTS] Edge TTS fetch error:', error);
                 speakWithBrowserTTS(text);
                 return true;
             }
@@ -944,6 +969,8 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
     const speakText = async (text) => {
         if (!enableTTS) return;
         
+        console.log('[speakText] Starting TTS, text length:', text.length);
+        
         // Set speaking state immediately for responsiveness
         setIsSpeaking(true);
         setAvatarState('speaking');
@@ -952,8 +979,9 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
         if (soundEnabled) soundEffects.play('aiSpeaking');
         
         if (ttsEngine === 'edge') {
-            // Use Edge TTS - wait for complete audio before playing
+            // Use Edge TTS - backend returns complete buffered audio
             try {
+                console.log('[speakText] Fetching Edge TTS from:', `${API_URL}/tts/edge`);
                 const response = await fetch(`${API_URL}/tts/edge`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -963,27 +991,27 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                     })
                 });
                 
-                if (response.ok && response.body) {
-                    // Collect all chunks first to ensure complete audio playback
-                    const reader = response.body.getReader();
-                    const chunks = [];
-                    
-                    // Read all chunks until done
-                    while (true) {
-                        const { done, value } = await reader.read();
-                        if (done) break;
-                        chunks.push(value);
-                    }
-                    
-                    // Play the complete audio
-                    const audioBlob = new Blob(chunks, { type: 'audio/mpeg' });
-                    playAudioBlob(audioBlob, true);
-                } else {
-                    // Fallback to browser TTS
+                console.log('[speakText] Edge TTS response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.warn('[speakText] Edge TTS error response:', errorText);
                     speakWithBrowserTTS(text);
+                    return;
+                }
+                
+                // Get audio blob directly from response
+                const audioBlob = await response.blob();
+                console.log('[speakText] Audio blob size:', audioBlob.size, 'type:', audioBlob.type);
+                
+                if (audioBlob.size < 1000) {
+                    console.warn('[speakText] Audio blob too small (' + audioBlob.size + ' bytes), falling back to browser TTS');
+                    speakWithBrowserTTS(text);
+                } else {
+                    playAudioBlob(audioBlob, true);
                 }
             } catch (error) {
-                console.error('Edge TTS error:', error);
+                console.error('[speakText] Edge TTS fetch error:', error);
                 // Fallback to browser TTS
                 speakWithBrowserTTS(text);
             }
@@ -1403,7 +1431,9 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
             if (data.response) {
                 if (enableTTS) {
                     // Show text AND start audio together for sync
+                    console.log('[Video TTS] Starting TTS for response length:', data.response.length);
                     try {
+                        console.log('[Video TTS] Fetching from:', `${API_URL}/tts/edge`);
                         const ttsResponse = await fetch(`${API_URL}/tts/edge`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -1413,38 +1443,60 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                             })
                         });
                         
+                        console.log('[Video TTS] Response status:', ttsResponse.status, 'ok:', ttsResponse.ok);
+                        
                         if (ttsResponse.ok) {
                             const audioBlob = await ttsResponse.blob();
-                            const audioUrl = URL.createObjectURL(audioBlob);
-                            const audio = new Audio(audioUrl);
-                            audio.preload = 'auto';
+                            console.log('[Video TTS] Audio blob size:', audioBlob.size);
                             
-                            audio.onended = () => {
-                                setIsSpeaking(false);
-                                setAvatarState('idle');
-                                URL.revokeObjectURL(audioUrl);
-                            };
-                            audio.onerror = () => {
-                                setIsSpeaking(false);
-                                setAvatarState('idle');
-                                URL.revokeObjectURL(audioUrl);
-                            };
-                            
-                            // Show text AND play audio at the same moment
-                            setConversationHistory(prev => [
-                                ...prev,
-                                { role: "assistant", content: data.response }
-                            ]);
-                            setIsSpeaking(true);
-                            setAvatarState('speaking');
-                            if (soundEnabled) soundEffects.play('aiSpeaking');
-                            
-                            audio.play().catch(() => {
-                                setIsSpeaking(false);
-                                setAvatarState('idle');
-                            });
+                            if (audioBlob.size < 100) {
+                                console.warn('[Video TTS] Audio blob too small, falling back to browser TTS');
+                                setConversationHistory(prev => [
+                                    ...prev,
+                                    { role: "assistant", content: data.response }
+                                ]);
+                                speakWithBrowserTTS(data.response);
+                            } else {
+                                const audioUrl = URL.createObjectURL(audioBlob);
+                                const audio = new Audio(audioUrl);
+                                audio.preload = 'auto';
+                                
+                                audio.onended = () => {
+                                    console.log('[Video TTS] Audio ended');
+                                    setIsSpeaking(false);
+                                    setAvatarState('idle');
+                                    URL.revokeObjectURL(audioUrl);
+                                };
+                                audio.onerror = (e) => {
+                                    console.error('[Video TTS] Audio error:', e);
+                                    setIsSpeaking(false);
+                                    setAvatarState('idle');
+                                    URL.revokeObjectURL(audioUrl);
+                                };
+                                
+                                // Show text AND play audio at the same moment
+                                setConversationHistory(prev => [
+                                    ...prev,
+                                    { role: "assistant", content: data.response }
+                                ]);
+                                setIsSpeaking(true);
+                                setAvatarState('speaking');
+                                if (soundEnabled) soundEffects.play('aiSpeaking');
+                                console.log('[Video TTS] Speaking state set to true');
+                                
+                                try {
+                                    await audio.play();
+                                    console.log('[Video TTS] Audio playing successfully');
+                                } catch (playError) {
+                                    console.error('[Video TTS] Play error:', playError);
+                                    setIsSpeaking(false);
+                                    setAvatarState('idle');
+                                    speakWithBrowserTTS(data.response);
+                                }
+                            }
                         } else {
                             // Fallback
+                            console.warn('[Video TTS] Response not ok, falling back to browser TTS');
                             setConversationHistory(prev => [
                                 ...prev,
                                 { role: "assistant", content: data.response }
@@ -1452,7 +1504,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                             speakWithBrowserTTS(data.response);
                         }
                     } catch (error) {
-                        console.error('Video TTS sync error:', error);
+                        console.error('[Video TTS] Fetch error:', error);
                         setConversationHistory(prev => [
                             ...prev,
                             { role: "assistant", content: data.response }

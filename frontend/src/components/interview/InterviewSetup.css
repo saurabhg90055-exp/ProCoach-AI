@@ -468,13 +468,15 @@
 .form-select {
     width: 100%;
     padding: 1rem 1.25rem;
-    background: rgba(255, 255, 255, 0.05);
+    background-color: #1a1a2e;
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
     color: #fff;
     font-size: 1rem;
     cursor: pointer;
     appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23a5b4fc' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 1rem center;
@@ -488,27 +490,29 @@
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
+/* Dark mode (default) - ensure dropdown options are visible */
 .form-select option {
-    background: var(--color-surface, #1a1a2e);
-    color: var(--color-text, #fff);
-    padding: 0.5rem;
+    background-color: #1a1a2e !important;
+    color: #ffffff !important;
+    padding: 0.75rem;
 }
 
 /* Light theme support for dropdowns */
 [data-theme="light"] .form-select {
-    background: var(--color-surface, #fff);
-    border-color: var(--color-border, #e2e8f0);
-    color: var(--color-text, #1a202c);
+    background-color: #ffffff;
+    border-color: #e2e8f0;
+    color: #1a202c;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%234f46e5' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
 
 [data-theme="light"] .form-select option {
-    background: #fff;
-    color: #1a202c;
+    background-color: #ffffff !important;
+    color: #1a202c !important;
 }
 
 [data-theme="light"] .form-select:hover,
 [data-theme="light"] .form-select:focus {
-    border-color: var(--color-primary, #6366f1);
+    border-color: #6366f1;
 }
 
 /* Company Grid */

@@ -665,17 +665,31 @@ async def edge_text_to_speech(request: EdgeTTSRequest):
         # Create communicate instance for edge-tts
         communicate = edge_tts.Communicate(request.text, request.voice)
         
-        # Stream audio as it's generated for faster response
-        async def audio_stream():
-            async for chunk in communicate.stream():
-                if chunk["type"] == "audio":
-                    yield chunk["data"]
+        # Collect all audio chunks into a buffer first for reliable delivery
+        audio_chunks = []
+        async for chunk in communicate.stream():
+            if chunk["type"] == "audio":
+                audio_chunks.append(chunk["data"])
+        
+        # Combine all chunks into a single audio buffer
+        audio_data = b"".join(audio_chunks)
+        
+        if len(audio_data) < 100:
+            print(f"Edge TTS Warning: Audio data too small ({len(audio_data)} bytes) for text: {request.text[:50]}...")
+            raise HTTPException(status_code=500, detail="Edge TTS generated insufficient audio data")
+        
+        print(f"Edge TTS: Generated {len(audio_data)} bytes for voice {request.voice}")
         
         return StreamingResponse(
-            audio_stream(),
+            io.BytesIO(audio_data),
             media_type="audio/mpeg",
-            headers={"Content-Disposition": "inline; filename=speech.mp3"}
+            headers={
+                "Content-Disposition": "inline; filename=speech.mp3",
+                "Content-Length": str(len(audio_data))
+            }
         )
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Edge TTS Error: {e}")
         raise HTTPException(status_code=500, detail=f"Edge TTS failed: {str(e)}")
