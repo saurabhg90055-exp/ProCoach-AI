@@ -8,8 +8,8 @@ import { RecordButton, Toast, ScoreDisplay, ScoreBadge, TypingIndicator } from "
 import { VideoInterview, VideoPreview, VideoInterviewSummary } from "./components/video";
 import soundEffects from "./utils/soundEffects";
 
-// API URL - use environment variable or default to localhost
-const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+// API URL - use environment variable or default to deployed backend
+const API_URL = import.meta.env.VITE_API_URL || "https://procoach-ai.onrender.com";
 
 const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) => {
     // Auth state (Phase 5)

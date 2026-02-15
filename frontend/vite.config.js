@@ -9,7 +9,7 @@ export default defineConfig({
     proxy: {
       // Proxy API requests in development
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'https://procoach-ai.onrender.com',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '')
       }
@@ -29,6 +29,6 @@ export default defineConfig({
   },
   define: {
     // Allow environment variable for API URL
-    'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || 'http://127.0.0.1:8000')
+    'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || 'https://procoach-ai.onrender.com')
   }
 })

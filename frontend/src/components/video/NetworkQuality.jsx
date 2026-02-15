@@ -74,7 +74,7 @@ const NetworkQuality = ({
             const start = performance.now();
             
             // Use health endpoint to measure RTT (more reliable than favicon)
-            await fetch('http://127.0.0.1:8000/health', { 
+            await fetch('https://procoach-ai.onrender.com/health', { 
                 method: 'GET',
                 cache: 'no-cache',
                 mode: 'cors'
