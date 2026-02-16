@@ -21,7 +21,6 @@ from pydantic import BaseModel
 from groq import Groq
 from dotenv import load_dotenv
 import shutil
-import edge_tts
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -33,7 +32,10 @@ from database import (
     update_user, update_user_xp, add_user_achievement, update_user_settings,
     create_interview_db, get_interview_by_session_id, update_interview,
     get_user_interviews as db_get_user_interviews, delete_interview as db_delete_interview,
-    save_interview_to_user, get_user_stats as db_get_user_stats, add_transcript_message
+    save_interview_to_user, get_user_stats as db_get_user_stats, add_transcript_message,
+    # Session persistence functions (replaces in-memory dict)
+    create_active_session, get_active_session, update_active_session, 
+    delete_active_session, append_to_session_history, append_to_session_scores
 )
 from auth import (
     UserCreate, UserResponse, UserLogin, Token, PasswordChange, UserUpdate,
@@ -101,8 +103,54 @@ async def health_check():
         "database": "mongodb"
     }
 
-# Store active interview sessions (in production, use Redis)
+# Local cache for active sessions (backed by MongoDB for persistence)
 interview_sessions = {}
+
+
+async def get_session(session_id: str) -> dict:
+    """Get session from local cache or MongoDB (for recovery after restart)"""
+    # Try local cache first (fastest)
+    if session_id in interview_sessions:
+        return interview_sessions[session_id]
+    
+    # Try MongoDB (handles server restarts on Render)
+    session = await get_active_session(session_id)
+    if session:
+        # Restore to local cache
+        interview_sessions[session_id] = session
+        return session
+    
+    return None
+
+
+async def save_session(session_id: str, session_data: dict):
+    """Save session to both local cache and MongoDB"""
+    # Save to local cache
+    interview_sessions[session_id] = session_data
+    
+    # Persist to MongoDB (handles Render restarts)
+    try:
+        existing = await get_active_session(session_id)
+        if existing:
+            await update_active_session(session_id, session_data)
+        else:
+            await create_active_session(session_id, session_data)
+    except Exception as e:
+        print(f"Warning: Could not persist session to MongoDB: {e}")
+
+
+async def remove_session(session_id: str):
+    """Remove session from both local cache and MongoDB"""
+    # Remove from local cache
+    if session_id in interview_sessions:
+        del interview_sessions[session_id]
+    
+    # Remove from MongoDB
+    try:
+        await delete_active_session(session_id)
+    except Exception as e:
+        print(f"Warning: Could not remove session from MongoDB: {e}")
+
 
 # Language code mapping for Whisper and TTS
 LANGUAGE_CODES = {
@@ -384,11 +432,6 @@ class TextToSpeechRequest(BaseModel):
     text: str
 
 
-class EdgeTTSRequest(BaseModel):
-    text: str
-    voice: str = "en-US-AriaNeural"  # Default to natural female voice
-
-
 class ResumeParseRequest(BaseModel):
     text: str
 
@@ -648,70 +691,14 @@ async def text_to_speech(request: TextToSpeechRequest):
             raise HTTPException(status_code=500, detail=f"TTS failed: {str(fallback_error)}")
 
 
-@app.post("/tts/edge")
-async def edge_text_to_speech(request: EdgeTTSRequest):
-    """
-    Free Edge TTS using Microsoft's Text-to-Speech engine.
-    
-    Available voices (all free, high-quality neural voices):
-    - en-US-AriaNeural (female, conversational - DEFAULT)
-    - en-US-JennyNeural (female, professional)
-    - en-US-GuyNeural (male, conversational)
-    - en-US-DavisNeural (male, professional)
-    - en-GB-SoniaNeural (female, British)
-    - en-AU-NatashaNeural (female, Australian)
-    """
-    try:
-        # Create communicate instance for edge-tts
-        communicate = edge_tts.Communicate(request.text, request.voice)
-        
-        # Collect all audio chunks into a buffer first for reliable delivery
-        audio_chunks = []
-        async for chunk in communicate.stream():
-            if chunk["type"] == "audio":
-                audio_chunks.append(chunk["data"])
-        
-        # Combine all chunks into a single audio buffer
-        audio_data = b"".join(audio_chunks)
-        
-        if len(audio_data) < 100:
-            print(f"Edge TTS Warning: Audio data too small ({len(audio_data)} bytes) for text: {request.text[:50]}...")
-            raise HTTPException(status_code=500, detail="Edge TTS generated insufficient audio data")
-        
-        print(f"Edge TTS: Generated {len(audio_data)} bytes for voice {request.voice}")
-        
-        return StreamingResponse(
-            io.BytesIO(audio_data),
-            media_type="audio/mpeg",
-            headers={
-                "Content-Disposition": "inline; filename=speech.mp3",
-                "Content-Length": str(len(audio_data))
-            }
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"Edge TTS Error: {e}")
-        raise HTTPException(status_code=500, detail=f"Edge TTS failed: {str(e)}")
-
-
 @app.get("/tts/voices")
 async def get_available_voices():
-    """Get list of available Edge TTS voices"""
+    """Get info about browser TTS - actual voice selection happens client-side"""
     return {
-        "voices": [
-            {"id": "en-US-AriaNeural", "name": "Aria", "gender": "Female", "locale": "US English", "recommended": True},
-            {"id": "en-US-JennyNeural", "name": "Jenny", "gender": "Female", "locale": "US English"},
-            {"id": "en-US-GuyNeural", "name": "Guy", "gender": "Male", "locale": "US English"},
-            {"id": "en-US-DavisNeural", "name": "Davis", "gender": "Male", "locale": "US English"},
-            {"id": "en-GB-SoniaNeural", "name": "Sonia", "gender": "Female", "locale": "UK English"},
-            {"id": "en-AU-NatashaNeural", "name": "Natasha", "gender": "Female", "locale": "Australian English"},
-            {"id": "en-IN-NeerjaNeural", "name": "Neerja", "gender": "Female", "locale": "Indian English"},
-            {"id": "en-US-ChristopherNeural", "name": "Christopher", "gender": "Male", "locale": "US English"},
-            {"id": "en-US-EricNeural", "name": "Eric", "gender": "Male", "locale": "US English"},
-            {"id": "en-US-MichelleNeural", "name": "Michelle", "gender": "Female", "locale": "US English"}
-        ],
-        "default": "en-US-AriaNeural"
+        "info": "TTS is handled by browser Web Speech API for reliability",
+        "male_voice": {"name": "Male Interviewer", "description": "Browser's default male voice"},
+        "female_voice": {"name": "Female Interviewer", "description": "Browser's default female voice"},
+        "note": "Voice quality depends on browser and OS. Chrome and Edge typically have best voices."
     }
 
 
@@ -935,8 +922,8 @@ All questions, feedback, and responses should be in this language.
     # Get user_id if authenticated
     user_id = current_user["_id"] if current_user else None
     
-    # Store in memory for active session
-    interview_sessions[session_id] = {
+    # Create session data
+    session_data = {
         "topic": session.topic,
         "topic_name": topic_config["name"],
         "difficulty": session.difficulty,
@@ -966,6 +953,9 @@ All questions, feedback, and responses should be in this language.
             "confidence_trend": "stable"
         }
     }
+    
+    # Store session (with MongoDB persistence for Render restarts)
+    await save_session(session_id, session_data)
     
     # Save to MongoDB only if authenticated user
     if user_id:
@@ -1010,10 +1000,9 @@ async def analyze_audio(
 ):
     """Process audio and continue the interview conversation"""
     
-    if session_id not in interview_sessions:
+    session = await get_session(session_id)
+    if not session:
         raise HTTPException(status_code=404, detail="Session not found. Please start a new interview.")
-    
-    session = interview_sessions[session_id]
     
     try:
         # Save temporary file
@@ -1085,6 +1074,9 @@ async def analyze_audio(
                 "question_count": session["question_count"]
             })
         
+        # Save session state for persistence
+        await save_session(session_id, session)
+        
         # Cleanup
         if os.path.exists(temp_filename):
             os.remove(temp_filename)
@@ -1109,10 +1101,9 @@ async def analyze_audio(
 async def end_interview(session_id: str):
     """End the interview and get summary"""
     
-    if session_id not in interview_sessions:
+    session = await get_session(session_id)
+    if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-    
-    session = interview_sessions[session_id]
     
     scores = session.get("scores", [])
     avg_score = round(sum(scores) / len(scores), 1) if scores else None
@@ -1214,7 +1205,7 @@ Be constructive, specific, and actionable."""
         }
         await create_interview_db(interview_data)
     
-    del interview_sessions[session_id]
+    await remove_session(session_id)
     
     return result
 
@@ -1225,10 +1216,9 @@ Be constructive, specific, and actionable."""
 async def record_expression_data(session_id: str, expression: ExpressionData):
     """Record expression data snapshot from video interview"""
     
-    if session_id not in interview_sessions:
+    session = await get_session(session_id)
+    if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-    
-    session = interview_sessions[session_id]
     
     # Add timestamp if not provided
     if not expression.timestamp:
@@ -1278,6 +1268,9 @@ async def record_expression_data(session_id: str, expression: ExpressionData):
             else:
                 session["video_metrics"]["confidence_trend"] = "stable"
     
+    # Save updated session
+    await save_session(session_id, session)
+    
     return {
         "success": True,
         "total_samples": len(history),
@@ -1289,10 +1282,9 @@ async def record_expression_data(session_id: str, expression: ExpressionData):
 async def get_video_metrics(session_id: str):
     """Get current video interview metrics"""
     
-    if session_id not in interview_sessions:
+    session = await get_session(session_id)
+    if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-    
-    session = interview_sessions[session_id]
     
     return {
         "session_id": session_id,
@@ -1316,10 +1308,9 @@ async def analyze_video_response(
 ):
     """Process audio with expression data for video interview"""
     
-    if session_id not in interview_sessions:
+    session = await get_session(session_id)
+    if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-    
-    session = interview_sessions[session_id]
     
     # Record expression data
     expression_snapshot = {
@@ -1426,6 +1417,8 @@ IMPORTANT: Naturally incorporate body language feedback when appropriate:
         # Calculate averages
         scores = session["scores"]
         avg_score = round(sum(scores) / len(scores), 1) if scores else None
+        # Save session state
+        await save_session(session_id, session)
         
         return {
             "transcription": user_response,
@@ -1447,10 +1440,9 @@ IMPORTANT: Naturally incorporate body language feedback when appropriate:
 async def end_video_interview(session_id: str):
     """End video interview and get comprehensive summary with expression analysis"""
     
-    if session_id not in interview_sessions:
+    session = await get_session(session_id)
+    if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-    
-    session = interview_sessions[session_id]
     
     scores = session.get("scores", [])
     avg_score = round(sum(scores) / len(scores), 1) if scores else None
@@ -1575,18 +1567,18 @@ Be constructive and specific about video presence."""
             "mode": "video"
         })
     
-    del interview_sessions[session_id]
+    await remove_session(session_id)
     
     return result
 
 
 @app.get("/interview/{session_id}/status")
-def get_session_status(session_id: str):
+async def get_session_status(session_id: str):
     """Get current session status"""
-    if session_id not in interview_sessions:
+    session = await get_session(session_id)
+    if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     
-    session = interview_sessions[session_id]
     scores = session.get("scores", [])
     
     start_time = session.get("start_time", time.time())
@@ -1614,9 +1606,10 @@ def get_session_status(session_id: str):
 
 
 @app.get("/interview/{session_id}/time")
-def get_interview_time(session_id: str):
+async def get_interview_time(session_id: str):
     """Get interview timer status"""
-    if session_id not in interview_sessions:
+    session = await get_session(session_id)
+    if not session:
         # Return default values for missing sessions (frontend will use local timer)
         return {
             "elapsed_seconds": 0,
@@ -1630,7 +1623,6 @@ def get_interview_time(session_id: str):
             "session_exists": False
         }
     
-    session = interview_sessions[session_id]
     start_time = session.get("start_time", time.time())
     elapsed_seconds = int(time.time() - start_time)
     duration_minutes = session.get("duration_minutes", 30)
@@ -1670,11 +1662,11 @@ async def save_interview_to_user_history(
         else:
             raise HTTPException(status_code=403, detail="Interview belongs to another user")
     
-    # If not in DB, check memory
-    if session_id not in interview_sessions:
+    # If not in DB, check memory/MongoDB session
+    session = await get_session(session_id)
+    if not session:
         raise HTTPException(status_code=404, detail="Session not found or already ended")
     
-    session = interview_sessions[session_id]
     scores = session.get("scores", [])
     
     # Create interview record
@@ -1702,7 +1694,8 @@ async def save_interview_to_user_history(
     result = await create_interview_db(interview_data)
     
     # Update session to mark as saved
-    interview_sessions[session_id]["user_id"] = current_user["_id"]
+    session["user_id"] = current_user["_id"]
+    await save_session(session_id, session)
     
     return {"success": True, "message": "Interview saved successfully", "interview_id": result["_id"]}
 
@@ -2073,10 +2066,10 @@ async def get_user_dashboard(current_user: dict = Depends(get_current_user_requi
 async def get_question_feedback(session_id: str):
     """Generate detailed feedback for each question-answer pair"""
     
-    if session_id not in interview_sessions:
+    session = await get_session(session_id)
+    if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     
-    session = interview_sessions[session_id]
     history = session["history"]
     scores = session.get("scores", [])
     
@@ -2137,10 +2130,10 @@ Give 2-3 sentences of feedback and suggest a better answer in 2-3 sentences."""
 async def get_coaching_tips(session_id: str):
     """Generate personalized coaching based on interview performance"""
     
-    if session_id not in interview_sessions:
+    session = await get_session(session_id)
+    if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     
-    session = interview_sessions[session_id]
     history = session["history"]
     scores = session.get("scores", [])
     
@@ -2210,7 +2203,8 @@ async def get_global_stats():
 async def export_interview_report(session_id: str):
     """Generate exportable interview report"""
     
-    if session_id not in interview_sessions:
+    session = await get_session(session_id)
+    if not session:
         # Check database for completed interview
         interview = await get_interview_by_session_id(session_id)
         if not interview:
@@ -2228,7 +2222,6 @@ async def export_interview_report(session_id: str):
             }
         }
     
-    session = interview_sessions[session_id]
     scores = session.get("scores", [])
     
     return {

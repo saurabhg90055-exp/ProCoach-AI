@@ -35,8 +35,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
     const [interviewMode, setInterviewMode] = useState("audio"); // 'audio' | 'video'
     const [interviewerGender, setInterviewerGender] = useState("male"); // 'male' | 'female'
     const [enableTTS, setEnableTTS] = useState(true);
-    const [ttsEngine, setTtsEngine] = useState("edge"); // 'browser' | 'edge'
-    const [edgeVoice, setEdgeVoice] = useState("en-US-GuyNeural");
+    // Browser TTS is now the only option (Edge TTS blocked on cloud servers)
     const [topics, setTopics] = useState([]);
     const [companies, setCompanies] = useState([]);
     const [difficulties, setDifficulties] = useState([]);
@@ -114,37 +113,14 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
     const [soundEnabled, setSoundEnabled] = useState(settings?.soundEffects ?? true);
     const [visualizerMode, setVisualizerMode] = useState('bars'); // 'bars' | 'wave' | 'circular' | 'orb'
     
-    // Determine avatar gender and name based on selected interviewer gender and voice
+    // Determine avatar gender and name based on selected interviewer gender
     const avatarInfo = useMemo(() => {
-        // Get interviewer name from voice
-        const voiceNames = {
-            'en-US-AriaNeural': 'ARIA',
-            'en-US-JennyNeural': 'JENNY',
-            'en-US-MichelleNeural': 'MICHELLE',
-            'en-GB-SoniaNeural': 'SONIA',
-            'en-AU-NatashaNeural': 'NATASHA',
-            'en-IN-NeerjaNeural': 'NEERJA',
-            'en-US-GuyNeural': 'GUY',
-            'en-US-DavisNeural': 'DAVIS',
-            'en-US-ChristopherNeural': 'CHRIS',
-            'en-US-EricNeural': 'ERIC'
-        };
-        
         const info = {
             gender: interviewerGender,
-            name: voiceNames[edgeVoice] || (interviewerGender === 'female' ? 'ARIA' : 'Saurabh')
+            name: interviewerGender === 'female' ? 'ARIA' : 'ALEX'
         };
         console.log('[AudioRecorder] avatarInfo computed:', info, 'interviewerGender:', interviewerGender);
         return info;
-    }, [edgeVoice, interviewerGender]);
-    
-    // Set default voice when interviewer gender changes
-    useEffect(() => {
-        if (interviewerGender === 'female') {
-            setEdgeVoice('en-US-AriaNeural');
-        } else {
-            setEdgeVoice('en-US-GuyNeural');
-        }
     }, [interviewerGender]);
     
     const mediaRecorderRef = useRef(null);
@@ -817,46 +793,13 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
         }
     };
 
-    // Prefetch TTS audio - returns a promise that resolves when audio is ready to play
+    // Prefetch TTS audio - no longer needed with browser TTS (returns null)
     const prefetchTTS = async (text) => {
-        if (!enableTTS || !text) return null;
-        
-        if (ttsEngine === 'edge') {
-            try {
-                const response = await fetch(`${API_URL}/tts/edge`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        text: text,
-                        voice: edgeVoice 
-                    })
-                });
-                
-                if (response.ok) {
-                    const audioBlob = await response.blob();
-                    const audioUrl = URL.createObjectURL(audioBlob);
-                    const audio = new Audio(audioUrl);
-                    audio.preload = 'auto';
-                    
-                    // Wait for audio to be at least partially loaded
-                    await new Promise((resolve) => {
-                        audio.oncanplay = resolve;
-                        audio.oncanplaythrough = resolve;
-                        audio.onerror = resolve;
-                        // Shorter timeout - start playing when we have data
-                        setTimeout(resolve, 100);
-                    });
-                    
-                    return { audio, audioUrl };
-                }
-            } catch (error) {
-                console.error('Edge TTS prefetch error:', error);
-            }
-        }
+        // Browser TTS doesn't support prefetching - returns null
         return null;
     };
     
-    // Play prefetched audio
+    // Play prefetched audio (kept for compatibility, handles null gracefully)
     const playPrefetchedAudio = (prefetchedAudio) => {
         if (!prefetchedAudio) return;
         
@@ -883,142 +826,22 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
         });
     };
     
-    // Fetch TTS and return promise that resolves when audio is ready + plays
+    // Fetch TTS and play - now always uses browser TTS
     const fetchAndPlayTTS = async (text) => {
         if (!enableTTS || !text) return;
         
-        console.log('[TTS] Starting TTS for text length:', text.length, 'engine:', ttsEngine);
-        
-        if (ttsEngine === 'edge') {
-            try {
-                console.log('[TTS] Fetching from:', `${API_URL}/tts/edge`);
-                const response = await fetch(`${API_URL}/tts/edge`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        text: text,
-                        voice: edgeVoice 
-                    })
-                });
-                
-                console.log('[TTS] Response status:', response.status, 'ok:', response.ok);
-                
-                if (response.ok) {
-                    const audioBlob = await response.blob();
-                    console.log('[TTS] Audio blob size:', audioBlob.size);
-                    
-                    if (audioBlob.size < 100) {
-                        console.warn('[TTS] Audio blob too small, falling back to browser TTS');
-                        speakWithBrowserTTS(text);
-                        return true;
-                    }
-                    
-                    const audioUrl = URL.createObjectURL(audioBlob);
-                    const audio = new Audio(audioUrl);
-                    audio.preload = 'auto';
-                    
-                    // NOW set speaking state and play
-                    setIsSpeaking(true);
-                    setAvatarState('speaking');
-                    if (soundEnabled) soundEffects.play('aiSpeaking');
-                    console.log('[TTS] Speaking state set to true, avatar state: speaking');
-                    
-                    audio.onended = () => {
-                        console.log('[TTS] Audio ended');
-                        setIsSpeaking(false);
-                        setAvatarState('idle');
-                        URL.revokeObjectURL(audioUrl);
-                    };
-                    audio.onerror = (e) => {
-                        console.error('[TTS] Audio error:', e);
-                        setIsSpeaking(false);
-                        setAvatarState('idle');
-                        URL.revokeObjectURL(audioUrl);
-                        // Try browser TTS as fallback
-                        speakWithBrowserTTS(text);
-                    };
-                    
-                    // Play and return - audio will start as soon as buffer allows
-                    try {
-                        await audio.play();
-                        console.log('[TTS] Audio playing successfully');
-                    } catch (playError) {
-                        console.error('[TTS] Play error:', playError);
-                        setIsSpeaking(false);
-                        setAvatarState('idle');
-                        // Fallback to browser TTS
-                        speakWithBrowserTTS(text);
-                    }
-                    return true;
-                } else {
-                    console.warn('[TTS] Edge TTS response not ok, falling back to browser TTS');
-                    speakWithBrowserTTS(text);
-                    return true;
-                }
-            } catch (error) {
-                console.error('[TTS] Edge TTS fetch error:', error);
-                speakWithBrowserTTS(text);
-                return true;
-            }
-        } else {
-            speakWithBrowserTTS(text);
-            return true;
-        }
+        console.log('[TTS] Starting browser TTS for text length:', text.length);
+        speakWithBrowserTTS(text);
+        return true;
     };
     
     const speakText = async (text) => {
         if (!enableTTS) return;
         
-        console.log('[speakText] Starting TTS, text length:', text.length);
+        console.log('[speakText] Starting browser TTS, text length:', text.length);
         
-        // Set speaking state immediately for responsiveness
-        setIsSpeaking(true);
-        setAvatarState('speaking');
-        
-        // Play sound effect
-        if (soundEnabled) soundEffects.play('aiSpeaking');
-        
-        if (ttsEngine === 'edge') {
-            // Use Edge TTS - backend returns complete buffered audio
-            try {
-                console.log('[speakText] Fetching Edge TTS from:', `${API_URL}/tts/edge`);
-                const response = await fetch(`${API_URL}/tts/edge`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        text: text,
-                        voice: edgeVoice 
-                    })
-                });
-                
-                console.log('[speakText] Edge TTS response status:', response.status);
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.warn('[speakText] Edge TTS error response:', errorText);
-                    speakWithBrowserTTS(text);
-                    return;
-                }
-                
-                // Get audio blob directly from response
-                const audioBlob = await response.blob();
-                console.log('[speakText] Audio blob size:', audioBlob.size, 'type:', audioBlob.type);
-                
-                if (audioBlob.size < 1000) {
-                    console.warn('[speakText] Audio blob too small (' + audioBlob.size + ' bytes), falling back to browser TTS');
-                    speakWithBrowserTTS(text);
-                } else {
-                    playAudioBlob(audioBlob, true);
-                }
-            } catch (error) {
-                console.error('[speakText] Edge TTS fetch error:', error);
-                // Fallback to browser TTS
-                speakWithBrowserTTS(text);
-            }
-        } else {
-            // Use Web Speech API (browser built-in TTS - free & reliable)
-            speakWithBrowserTTS(text);
-        }
+        // Use Web Speech API (browser built-in TTS - free & reliable)
+        speakWithBrowserTTS(text);
     };
     
     // Helper function to play audio blob
@@ -1061,14 +884,56 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
             utterance.pitch = 1.0;
             utterance.volume = 1.0;
             
-            // Try to get a good English voice
+            // Select voice based on interviewer gender
             const voices = window.speechSynthesis.getVoices();
-            const englishVoice = voices.find(v => 
-                v.lang.includes('en') && (v.name.includes('Google') || v.name.includes('Microsoft'))
-            ) || voices.find(v => v.lang.includes('en'));
             
-            if (englishVoice) {
-                utterance.voice = englishVoice;
+            // Voice selection logic:
+            // For female: prefer voices with female indicators
+            // For male: prefer voices with male indicators
+            const isFemale = interviewerGender === 'female';
+            
+            // Common female voice name patterns
+            const femalePatterns = ['female', 'woman', 'zira', 'hazel', 'susan', 'samantha', 'karen', 'moira', 'fiona', 'tessa', 'veena', 'aria', 'jenny', 'michelle', 'sonia', 'natasha', 'neerja'];
+            // Common male voice name patterns  
+            const malePatterns = ['male', 'man', 'david', 'mark', 'james', 'george', 'daniel', 'guy', 'davis', 'christopher', 'eric', 'ryan'];
+            
+            let selectedVoice = null;
+            const englishVoices = voices.filter(v => v.lang.includes('en'));
+            
+            if (isFemale) {
+                // Try to find a female voice
+                selectedVoice = englishVoices.find(v => 
+                    femalePatterns.some(p => v.name.toLowerCase().includes(p))
+                );
+                // If no female pattern found, try Google/Microsoft voices (often have good quality)
+                if (!selectedVoice) {
+                    selectedVoice = englishVoices.find(v => 
+                        (v.name.includes('Google') || v.name.includes('Microsoft')) &&
+                        !malePatterns.some(p => v.name.toLowerCase().includes(p))
+                    );
+                }
+            } else {
+                // Try to find a male voice
+                selectedVoice = englishVoices.find(v => 
+                    malePatterns.some(p => v.name.toLowerCase().includes(p))
+                );
+                // If no male pattern found, try Google/Microsoft voices
+                if (!selectedVoice) {
+                    selectedVoice = englishVoices.find(v => 
+                        (v.name.includes('Google') || v.name.includes('Microsoft')) &&
+                        !femalePatterns.some(p => v.name.toLowerCase().includes(p))
+                    );
+                }
+            }
+            
+            // Fallback to any English voice
+            if (!selectedVoice) {
+                selectedVoice = englishVoices[0] || voices[0];
+            }
+            
+            if (selectedVoice) {
+                utterance.voice = selectedVoice;
+                console.log(`[BrowserTTS] Using voice: ${selectedVoice.name} for ${interviewerGender} interviewer`);
             }
             
             // Chrome bug workaround: Chrome pauses speech synthesis after ~15 seconds
@@ -1429,93 +1294,16 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                 ]);
             }
             if (data.response) {
+                // Add response to conversation history
+                setConversationHistory(prev => [
+                    ...prev,
+                    { role: "assistant", content: data.response }
+                ]);
+                
+                // Use browser TTS if enabled
                 if (enableTTS) {
-                    // Show text AND start audio together for sync
-                    console.log('[Video TTS] Starting TTS for response length:', data.response.length);
-                    try {
-                        console.log('[Video TTS] Fetching from:', `${API_URL}/tts/edge`);
-                        const ttsResponse = await fetch(`${API_URL}/tts/edge`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ 
-                                text: data.response,
-                                voice: edgeVoice 
-                            })
-                        });
-                        
-                        console.log('[Video TTS] Response status:', ttsResponse.status, 'ok:', ttsResponse.ok);
-                        
-                        if (ttsResponse.ok) {
-                            const audioBlob = await ttsResponse.blob();
-                            console.log('[Video TTS] Audio blob size:', audioBlob.size);
-                            
-                            if (audioBlob.size < 100) {
-                                console.warn('[Video TTS] Audio blob too small, falling back to browser TTS');
-                                setConversationHistory(prev => [
-                                    ...prev,
-                                    { role: "assistant", content: data.response }
-                                ]);
-                                speakWithBrowserTTS(data.response);
-                            } else {
-                                const audioUrl = URL.createObjectURL(audioBlob);
-                                const audio = new Audio(audioUrl);
-                                audio.preload = 'auto';
-                                
-                                audio.onended = () => {
-                                    console.log('[Video TTS] Audio ended');
-                                    setIsSpeaking(false);
-                                    setAvatarState('idle');
-                                    URL.revokeObjectURL(audioUrl);
-                                };
-                                audio.onerror = (e) => {
-                                    console.error('[Video TTS] Audio error:', e);
-                                    setIsSpeaking(false);
-                                    setAvatarState('idle');
-                                    URL.revokeObjectURL(audioUrl);
-                                };
-                                
-                                // Show text AND play audio at the same moment
-                                setConversationHistory(prev => [
-                                    ...prev,
-                                    { role: "assistant", content: data.response }
-                                ]);
-                                setIsSpeaking(true);
-                                setAvatarState('speaking');
-                                if (soundEnabled) soundEffects.play('aiSpeaking');
-                                console.log('[Video TTS] Speaking state set to true');
-                                
-                                try {
-                                    await audio.play();
-                                    console.log('[Video TTS] Audio playing successfully');
-                                } catch (playError) {
-                                    console.error('[Video TTS] Play error:', playError);
-                                    setIsSpeaking(false);
-                                    setAvatarState('idle');
-                                    speakWithBrowserTTS(data.response);
-                                }
-                            }
-                        } else {
-                            // Fallback
-                            console.warn('[Video TTS] Response not ok, falling back to browser TTS');
-                            setConversationHistory(prev => [
-                                ...prev,
-                                { role: "assistant", content: data.response }
-                            ]);
-                            speakWithBrowserTTS(data.response);
-                        }
-                    } catch (error) {
-                        console.error('[Video TTS] Fetch error:', error);
-                        setConversationHistory(prev => [
-                            ...prev,
-                            { role: "assistant", content: data.response }
-                        ]);
-                        speakWithBrowserTTS(data.response);
-                    }
-                } else {
-                    setConversationHistory(prev => [
-                        ...prev,
-                        { role: "assistant", content: data.response }
-                    ]);
+                    console.log('[Video TTS] Starting browser TTS for response length:', data.response.length);
+                    speakWithBrowserTTS(data.response);
                 }
             }
             if (data.question_count) {
@@ -2223,54 +2011,12 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                                 </div>
                                 
                                 {enableTTS && (
-                                    <>
-                                        <div className="form-group">
-                                            <label>🎙️ Voice Engine:</label>
-                                            <div className="engine-buttons">
-                                                <button
-                                                    className={`engine-btn ${ttsEngine === 'edge' ? 'active' : ''}`}
-                                                    onClick={() => setTtsEngine('edge')}
-                                                >
-                                                    🌐 Neural AI (Premium)
-                                                </button>
-                                                <button
-                                                    className={`engine-btn ${ttsEngine === 'browser' ? 'active' : ''}`}
-                                                    onClick={() => setTtsEngine('browser')}
-                                                >
-                                                    💻 Browser (Basic)
-                                                </button>
-                                            </div>
-                                        </div>
-                                        
-                                        {ttsEngine === 'edge' && (
-                                            <div className="form-group">
-                                                <label>🎭 AI Voice:</label>
-                                                <select 
-                                                    value={edgeVoice} 
-                                                    onChange={(e) => setEdgeVoice(e.target.value)}
-                                                    className="voice-select"
-                                                >
-                                                    {interviewerGender === 'female' ? (
-                                                        <optgroup label="Female Voices">
-                                                            <option value="en-US-AriaNeural">Aria (US) - Conversational</option>
-                                                            <option value="en-US-JennyNeural">Jenny (US) - Professional</option>
-                                                            <option value="en-US-MichelleNeural">Michelle (US) - Natural</option>
-                                                            <option value="en-GB-SoniaNeural">Sonia (UK) - British</option>
-                                                            <option value="en-AU-NatashaNeural">Natasha (AU) - Australian</option>
-                                                            <option value="en-IN-NeerjaNeural">Neerja (IN) - Indian</option>
-                                                        </optgroup>
-                                                    ) : (
-                                                        <optgroup label="Male Voices">
-                                                            <option value="en-US-GuyNeural">Guy (US) - Conversational</option>
-                                                            <option value="en-US-DavisNeural">Davis (US) - Professional</option>
-                                                            <option value="en-US-ChristopherNeural">Christopher (US) - Formal</option>
-                                                            <option value="en-US-EricNeural">Eric (US) - Friendly</option>
-                                                        </optgroup>
-                                                    )}
-                                                </select>
-                                            </div>
-                                        )}
-                                    </>
+                                    <div className="form-group">
+                                        <p className="form-hint">
+                                            💡 Voice uses your browser's built-in text-to-speech. 
+                                            {interviewerGender === 'female' ? ' A female voice will be selected.' : ' A male voice will be selected.'}
+                                        </p>
+                                    </div>
                                 )}
                                 
                                 <button 

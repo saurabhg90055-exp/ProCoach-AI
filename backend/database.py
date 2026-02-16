@@ -89,6 +89,10 @@ async def create_indexes():
     await db.interviews.create_index("user_id")
     await db.interviews.create_index("started_at")
     
+    # Active session indexes (for persistent sessions)
+    await db.active_sessions.create_index("session_id", unique=True)
+    await db.active_sessions.create_index("created_at", expireAfterSeconds=7200)  # Auto-expire after 2 hours
+    
     # API usage indexes
     await db.api_usage.create_index("user_id")
     await db.api_usage.create_index("created_at")
@@ -97,6 +101,85 @@ async def create_indexes():
     await db.global_stats.create_index("stat_key", unique=True)
     
     print("📊 Database indexes created")
+
+
+# ============== ACTIVE SESSION STORAGE (Replaces in-memory dict) ==============
+
+async def create_active_session(session_id: str, session_data: dict) -> dict:
+    """Store an active interview session in MongoDB"""
+    session_data["session_id"] = session_id
+    session_data["created_at"] = datetime.utcnow()
+    session_data["updated_at"] = datetime.utcnow()
+    
+    try:
+        await db.active_sessions.insert_one(session_data)
+        return session_data
+    except Exception as e:
+        print(f"Error creating active session: {e}")
+        raise e
+
+
+async def get_active_session(session_id: str) -> Optional[dict]:
+    """Get an active session from MongoDB"""
+    session = await db.active_sessions.find_one({"session_id": session_id})
+    if session:
+        # Remove MongoDB _id for JSON serialization
+        session.pop("_id", None)
+    return session
+
+
+async def update_active_session(session_id: str, update_data: dict) -> Optional[dict]:
+    """Update an active session in MongoDB"""
+    update_data["updated_at"] = datetime.utcnow()
+    result = await db.active_sessions.update_one(
+        {"session_id": session_id},
+        {"$set": update_data}
+    )
+    if result.modified_count > 0 or result.matched_count > 0:
+        return await get_active_session(session_id)
+    return None
+
+
+async def delete_active_session(session_id: str) -> bool:
+    """Delete an active session from MongoDB"""
+    result = await db.active_sessions.delete_one({"session_id": session_id})
+    return result.deleted_count > 0
+
+
+async def append_to_session_history(session_id: str, message: dict) -> bool:
+    """Append a message to session history"""
+    result = await db.active_sessions.update_one(
+        {"session_id": session_id},
+        {
+            "$push": {"history": message},
+            "$set": {"updated_at": datetime.utcnow()}
+        }
+    )
+    return result.modified_count > 0
+
+
+async def append_to_session_scores(session_id: str, score: int) -> bool:
+    """Append a score to session scores"""
+    result = await db.active_sessions.update_one(
+        {"session_id": session_id},
+        {
+            "$push": {"scores": score},
+            "$set": {"updated_at": datetime.utcnow()}
+        }
+    )
+    return result.modified_count > 0
+
+
+async def increment_session_question_count(session_id: str) -> bool:
+    """Increment question count in session"""
+    result = await db.active_sessions.update_one(
+        {"session_id": session_id},
+        {
+            "$inc": {"question_count": 1},
+            "$set": {"updated_at": datetime.utcnow()}
+        }
+    )
+    return result.modified_count > 0
 
 
 def get_database():
