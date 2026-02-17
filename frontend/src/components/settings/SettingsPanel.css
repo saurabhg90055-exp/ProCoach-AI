@@ -167,25 +167,26 @@
 }
 
 /* Toggle Switch */
-position: relative;
-width: 48px !important;
-min-width: 48px !important;
-/* Force minimum width */
-height: 26px !important;
-min-height: 26px !important;
-background: rgba(255, 255, 255, 0.1);
-border: none;
-border-radius: 13px !important;
-/* Return to standard pill radius */
-cursor: pointer;
-transition: all 0.3s ease;
-flex: 0 0 48px !important;
-/* Strict flex basis */
--webkit-appearance: none;
-appearance: none;
-padding: 0;
-margin: 0;
-box-sizing: border-box;
+.toggle-switch {
+    position: relative;
+    width: 48px !important;
+    min-width: 48px !important;
+    /* Force minimum width */
+    height: 26px !important;
+    min-height: 26px !important;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 13px !important;
+    /* Return to standard pill radius */
+    cursor: pointer;
+    transition: all 0.3s ease;
+    flex: 0 0 48px !important;
+    /* Strict flex basis */
+    -webkit-appearance: none;
+    appearance: none;
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
 }
 
 .toggle-switch.active {

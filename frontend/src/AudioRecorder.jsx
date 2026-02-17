@@ -25,7 +25,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
     const [authError, setAuthError] = useState('');
     const [isAuthLoading, setIsAuthLoading] = useState(false);
     const [userStats, setUserStats] = useState(null);
-    
+
     // Session state
     const [sessionId, setSessionId] = useState(null);
     const [selectedTopic, setSelectedTopic] = useState("general");
@@ -40,14 +40,14 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
     const [companies, setCompanies] = useState([]);
     const [difficulties, setDifficulties] = useState([]);
     const [interviewStarted, setInterviewStarted] = useState(false);
-    
+
     // Resume & Job Description state
     const [resumeFile, setResumeFile] = useState(null);
     const [resumeText, setResumeText] = useState("");
     const [resumeParsed, setResumeParsed] = useState(null);
     const [jobDescription, setJobDescription] = useState("");
     const [isParsingResume, setIsParsingResume] = useState(false);
-    
+
     // Recording state
     const [isRecording, setIsRecording] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -55,16 +55,16 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
     const [audioURL, setAudioURL] = useState(null);
     const [audioBlob, setAudioBlob] = useState(null);
     const [recordingTime, setRecordingTime] = useState(0);
-    
+
     // Timer state
     const [elapsedTime, setElapsedTime] = useState(0);
     const [remainingTime, setRemainingTime] = useState(0);
     const [isTimeWarning, setIsTimeWarning] = useState(false);
     const [isTimeUp, setIsTimeUp] = useState(false);
-    
+
     // Audio visualization state
     const [audioLevel, setAudioLevel] = useState(0);
-    
+
     // Conversation state
     const [conversationHistory, setConversationHistory] = useState([]);
     const [questionCount, setQuestionCount] = useState(0);
@@ -72,11 +72,11 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
     const [averageScore, setAverageScore] = useState(null);
     const [difficultyTrend, setDifficultyTrend] = useState("stable");
     const [allScores, setAllScores] = useState([]);
-    
+
     // Summary state
     const [showSummary, setShowSummary] = useState(false);
     const [summary, setSummary] = useState(null);
-    
+
     // Phase 4: Analytics state
     const [showAnalytics, setShowAnalytics] = useState(false);
     const [analytics, setAnalytics] = useState(null);
@@ -84,7 +84,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
     const [isLoadingFeedback, setIsLoadingFeedback] = useState(false);
     const [interviewHistory, setInterviewHistory] = useState([]);
     const [historyStats, setHistoryStats] = useState(null);
-    
+
     // Phase 6: Coaching state
     const [showCoaching, setShowCoaching] = useState(false);
     const [liveCoaching, setLiveCoaching] = useState(null);
@@ -92,27 +92,27 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
     const [aiCoaching, setAiCoaching] = useState(null);
     const [improvementPlan, setImprovementPlan] = useState(null);
     const [isLoadingCoaching, setIsLoadingCoaching] = useState(false);
-    
+
     // Phase 7: Error handling & notifications
     const [notification, setNotification] = useState(null);
     const [isOnline, setIsOnline] = useState(navigator.onLine);
-    
+
     // Pending interview to save after login
     const [pendingInterviewToSave, setPendingInterviewToSave] = useState(null);
-    
+
     // Setup step state
     const [setupStep, setSetupStep] = useState(1); // 1: basics, 2: resume/JD, 3: confirm
-    
+
     // Video mode state
     const [showVideoPreview, setShowVideoPreview] = useState(false);
     const [videoExpressionHistory, setVideoExpressionHistory] = useState([]);
     const [videoMetrics, setVideoMetrics] = useState({});
-    
+
     // Phase 8: Enhanced UI state
     const [avatarState, setAvatarState] = useState('idle'); // 'idle' | 'speaking' | 'listening' | 'thinking' | 'happy' | 'concerned'
     const [soundEnabled, setSoundEnabled] = useState(settings?.soundEffects ?? true);
     const [visualizerMode, setVisualizerMode] = useState('bars'); // 'bars' | 'wave' | 'circular' | 'orb'
-    
+
     // Determine avatar gender and name based on selected interviewer gender
     const avatarInfo = useMemo(() => {
         const info = {
@@ -122,7 +122,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
         console.log('[AudioRecorder] avatarInfo computed:', info, 'interviewerGender:', interviewerGender);
         return info;
     }, [interviewerGender]);
-    
+
     const mediaRecorderRef = useRef(null);
     const chunksRef = useRef([]);
     const chatEndRef = useRef(null);
@@ -144,7 +144,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
         setNotification({ message, type });
         setTimeout(() => setNotification(null), duration);
     }, []);
-    
+
     // Online/offline detection
     useEffect(() => {
         const handleOnline = () => {
@@ -155,10 +155,10 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
             setIsOnline(false);
             showNotification('You are offline. Some features may not work.', 'warning');
         };
-        
+
         window.addEventListener('online', handleOnline);
         window.addEventListener('offline', handleOffline);
-        
+
         return () => {
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
@@ -170,7 +170,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
         fetchTopics();
         fetchCompanies();
         fetchDifficulties();
-        
+
         // Preload speech synthesis voices
         if ('speechSynthesis' in window) {
             window.speechSynthesis.getVoices();
@@ -187,14 +187,14 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
 
     // Interview timer - local fallback when backend is unavailable
     const timerStartRef = useRef(null);
-    
+
     useEffect(() => {
         if (interviewStarted && sessionId) {
             // Initialize start time for local fallback
             if (!timerStartRef.current) {
                 timerStartRef.current = Date.now();
             }
-            
+
             timerIntervalRef.current = setInterval(async () => {
                 try {
                     const response = await fetch(`${API_URL}/interview/${sessionId}/time`);
@@ -223,7 +223,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                     setIsTimeUp(remaining <= 0);
                 }
             }, 1000);
-            
+
             return () => {
                 clearInterval(timerIntervalRef.current);
                 timerStartRef.current = null;
@@ -304,20 +304,20 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
     const handleResumeUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        
+
         setResumeFile(file);
         setIsParsingResume(true);
-        
+
         const formData = new FormData();
         formData.append("file", file);
-        
+
         try {
             const response = await fetch(`${API_URL}/resume/parse`, {
                 method: "POST",
                 body: formData
             });
             const data = await response.json();
-            
+
             if (data.success) {
                 setResumeText(data.parsed_info);
                 setResumeParsed(data.parsed_info);
@@ -398,7 +398,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
     };
 
     // ============== PHASE 6: COACHING FUNCTIONS ==============
-    
+
     const fetchLiveCoaching = async () => {
         if (!sessionId) return;
         setIsLoadingCoaching(true);
@@ -411,7 +411,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
         }
         setIsLoadingCoaching(false);
     };
-    
+
     const fetchSpeechAnalysis = async () => {
         if (!sessionId) return;
         setIsLoadingCoaching(true);
@@ -426,7 +426,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
         }
         setIsLoadingCoaching(false);
     };
-    
+
     const fetchAiCoaching = async () => {
         const coachingSessionId = sessionId || summary?.sessionId;
         if (!coachingSessionId) return;
@@ -442,7 +442,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
         }
         setIsLoadingCoaching(false);
     };
-    
+
     const fetchImprovementPlan = async () => {
         const planSessionId = sessionId || summary?.sessionId;
         if (!planSessionId) return;
@@ -458,7 +458,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
     };
 
     // ============== PHASE 5: AUTHENTICATION ==============
-    
+
     // Check auth status on mount and whenever localStorage changes (syncs with AuthContext)
     useEffect(() => {
         const checkAndSyncAuth = () => {
@@ -473,26 +473,26 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                 setUser(null);
             }
         };
-        
+
         checkAndSyncAuth();
-        
+
         // Listen for storage changes (when user logs in/out from App.jsx)
         const handleStorageChange = (e) => {
             if (e.key === 'authToken') {
                 checkAndSyncAuth();
             }
         };
-        
+
         // Also listen for custom auth events
         const handleAuthChange = () => checkAndSyncAuth();
-        
+
         window.addEventListener('storage', handleStorageChange);
         window.addEventListener('auth:login', handleAuthChange);
         window.addEventListener('auth:logout', handleAuthChange);
-        
+
         // Poll for changes every 2 seconds as a fallback
         const pollInterval = setInterval(checkAndSyncAuth, 2000);
-        
+
         return () => {
             window.removeEventListener('storage', handleStorageChange);
             window.removeEventListener('auth:login', handleAuthChange);
@@ -500,7 +500,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
             clearInterval(pollInterval);
         };
     }, [authToken]);
-    
+
     const verifyAuth = async (token = authToken) => {
         if (!token) return;
         try {
@@ -522,7 +522,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
             handleLogout();
         }
     };
-    
+
     const fetchUserStats = async () => {
         if (!authToken) return;
         try {
@@ -537,25 +537,25 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
             console.error("Error fetching user stats:", error);
         }
     };
-    
+
     const handleLogin = async (e) => {
         e.preventDefault();
         setAuthError('');
         setIsAuthLoading(true);
-        
+
         try {
             const formData = new URLSearchParams();
             formData.append('username', authEmail);
             formData.append('password', authPassword);
-            
+
             const response = await fetch(`${API_URL}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: formData
             });
-            
+
             const data = await response.json();
-            
+
             if (response.ok) {
                 localStorage.setItem('authToken', data.access_token);
                 setAuthToken(data.access_token);
@@ -564,16 +564,16 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                 setShowAuthModal(false);
                 resetAuthForm();
                 fetchUserStats();
-                
+
                 // Dispatch auth:login event for other components
                 window.dispatchEvent(new CustomEvent('auth:login'));
-                
+
                 // Auto-save pending interview if exists
                 if (pendingInterviewToSave) {
                     await autoSaveInterviewAfterLogin(pendingInterviewToSave, data.access_token);
                     setPendingInterviewToSave(null);
                 }
-                
+
                 showNotification('Welcome back! 🎉', 'success');
             } else {
                 setAuthError(data.detail || 'Login failed');
@@ -583,18 +583,18 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
         }
         setIsAuthLoading(false);
     };
-    
+
     const handleRegister = async (e) => {
         e.preventDefault();
         setAuthError('');
         setIsAuthLoading(true);
-        
+
         if (authPassword.length < 8) {
             setAuthError('Password must be at least 8 characters');
             setIsAuthLoading(false);
             return;
         }
-        
+
         try {
             const response = await fetch(`${API_URL}/auth/register`, {
                 method: 'POST',
@@ -606,9 +606,9 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                     full_name: authFullName
                 })
             });
-            
+
             const data = await response.json();
-            
+
             if (response.ok) {
                 localStorage.setItem('authToken', data.access_token);
                 setAuthToken(data.access_token);
@@ -616,16 +616,16 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                 setIsAuthenticated(true);
                 setShowAuthModal(false);
                 resetAuthForm();
-                
+
                 // Dispatch auth:login event for other components
                 window.dispatchEvent(new CustomEvent('auth:login'));
-                
+
                 // Auto-save pending interview if exists
                 if (pendingInterviewToSave) {
                     await autoSaveInterviewAfterLogin(pendingInterviewToSave, data.access_token);
                     setPendingInterviewToSave(null);
                 }
-                
+
                 showNotification('Account created! Welcome aboard! 🚀', 'success');
             } else {
                 setAuthError(data.detail || 'Registration failed');
@@ -635,7 +635,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
         }
         setIsAuthLoading(false);
     };
-    
+
     // Auto-save interview after login/register
     const autoSaveInterviewAfterLogin = async (interviewSessionId, token) => {
         try {
@@ -646,7 +646,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                     'Content-Type': 'application/json'
                 }
             });
-            
+
             if (response.ok) {
                 showNotification('Interview automatically saved to your history! 📁', 'success');
                 fetchInterviewHistory();
@@ -655,7 +655,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
             console.error("Error auto-saving interview:", error);
         }
     };
-    
+
     const handleLogout = () => {
         localStorage.removeItem('authToken');
         setAuthToken(null);
@@ -665,7 +665,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
         // Dispatch logout event
         window.dispatchEvent(new CustomEvent('auth:logout'));
     };
-    
+
     const resetAuthForm = () => {
         setAuthEmail('');
         setAuthUsername('');
@@ -673,7 +673,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
         setAuthFullName('');
         setAuthError('');
     };
-    
+
     const getAuthHeaders = () => {
         // Always get the latest token from localStorage to stay in sync with AuthContext
         const token = authToken || localStorage.getItem('authToken');
@@ -708,7 +708,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                 headers: getAuthHeaders()
             });
             const data = await response.json();
-            
+
             // Download as JSON
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
@@ -732,10 +732,10 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
             showNotification('No interview session to save', 'error');
             return;
         }
-        
+
         // Pass the session ID to requireAuth so it can be saved after login
-        if (!requireAuth(() => {}, 'save interview history', saveSessionId)) return;
-        
+        if (!requireAuth(() => { }, 'save interview history', saveSessionId)) return;
+
         try {
             const response = await fetch(`${API_URL}/user/interviews/save?session_id=${saveSessionId}`, {
                 method: "POST",
@@ -744,7 +744,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                     'Content-Type': 'application/json'
                 }
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
                 showNotification(data.message || 'Interview saved to your history! ✅', 'success');
@@ -761,18 +761,18 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
 
     // Get AI Coaching - requires authentication
     const handleGetAiCoaching = async () => {
-        if (!requireAuth(() => {}, 'get AI coaching')) return;
+        if (!requireAuth(() => { }, 'get AI coaching')) return;
         fetchAiCoaching();
         fetchImprovementPlan();
     };
 
     // Share results - requires authentication
     const handleShareResults = async () => {
-        if (!requireAuth(() => {}, 'share results')) return;
-        
+        if (!requireAuth(() => { }, 'share results')) return;
+
         // Create shareable text
         const shareText = `I just completed a ${selectedDifficulty} ${selectedTopic} interview on ProCoach AI and scored ${summary?.scores?.average || averageScore}/10! 🎯`;
-        
+
         if (navigator.share) {
             try {
                 await navigator.share({
@@ -798,17 +798,17 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
         // Browser TTS doesn't support prefetching - returns null
         return null;
     };
-    
+
     // Play prefetched audio (kept for compatibility, handles null gracefully)
     const playPrefetchedAudio = (prefetchedAudio) => {
         if (!prefetchedAudio) return;
-        
+
         const { audio, audioUrl } = prefetchedAudio;
-        
+
         setIsSpeaking(true);
         setAvatarState('speaking');
         if (soundEnabled) soundEffects.play('aiSpeaking');
-        
+
         audio.onended = () => {
             setIsSpeaking(false);
             setAvatarState('idle');
@@ -819,37 +819,37 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
             setAvatarState('idle');
             URL.revokeObjectURL(audioUrl);
         };
-        
+
         audio.play().catch(() => {
             setIsSpeaking(false);
             setAvatarState('idle');
         });
     };
-    
+
     // Fetch TTS and play - now always uses browser TTS
     const fetchAndPlayTTS = async (text) => {
         if (!enableTTS || !text) return;
-        
+
         console.log('[TTS] Starting browser TTS for text length:', text.length);
         speakWithBrowserTTS(text);
         return true;
     };
-    
+
     const speakText = async (text) => {
         if (!enableTTS) return;
-        
+
         console.log('[speakText] Starting browser TTS, text length:', text.length);
-        
+
         // Use Web Speech API (browser built-in TTS - free & reliable)
         speakWithBrowserTTS(text);
     };
-    
+
     // Helper function to play audio blob
     const playAudioBlob = (blob, handleEnd = true) => {
         const audioUrl = URL.createObjectURL(blob);
         const audio = new Audio(audioUrl);
         audio.preload = 'auto';
-        
+
         if (handleEnd) {
             audio.onended = () => {
                 setIsSpeaking(false);
@@ -862,80 +862,80 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                 URL.revokeObjectURL(audioUrl);
             };
         }
-        
+
         audio.play().catch(() => {
             setIsSpeaking(false);
             setAvatarState('idle');
         });
     };
-    
+
     const speakWithBrowserTTS = (text) => {
         if ('speechSynthesis' in window) {
             // Cancel any ongoing speech
             window.speechSynthesis.cancel();
-            
+
             // Set speaking state
             setIsSpeaking(true);
             setAvatarState('speaking');
             if (soundEnabled) soundEffects.play('aiSpeaking');
-            
+
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.rate = 1.0;
             utterance.pitch = 1.0;
             utterance.volume = 1.0;
-            
+
             // Select voice based on interviewer gender
             const voices = window.speechSynthesis.getVoices();
-            
+
             // Voice selection logic:
             // For female: prefer voices with female indicators
             // For male: prefer voices with male indicators
             const isFemale = interviewerGender === 'female';
-            
+
             // Common female voice name patterns
             const femalePatterns = ['female', 'woman', 'zira', 'hazel', 'susan', 'samantha', 'karen', 'moira', 'fiona', 'tessa', 'veena', 'aria', 'jenny', 'michelle', 'sonia', 'natasha', 'neerja'];
             // Common male voice name patterns  
             const malePatterns = ['male', 'man', 'david', 'mark', 'james', 'george', 'daniel', 'guy', 'davis', 'christopher', 'eric', 'ryan'];
-            
+
             let selectedVoice = null;
             const englishVoices = voices.filter(v => v.lang.includes('en'));
-            
+
             if (isFemale) {
                 // Try to find a female voice
-                selectedVoice = englishVoices.find(v => 
+                selectedVoice = englishVoices.find(v =>
                     femalePatterns.some(p => v.name.toLowerCase().includes(p))
                 );
                 // If no female pattern found, try Google/Microsoft voices (often have good quality)
                 if (!selectedVoice) {
-                    selectedVoice = englishVoices.find(v => 
+                    selectedVoice = englishVoices.find(v =>
                         (v.name.includes('Google') || v.name.includes('Microsoft')) &&
                         !malePatterns.some(p => v.name.toLowerCase().includes(p))
                     );
                 }
             } else {
                 // Try to find a male voice
-                selectedVoice = englishVoices.find(v => 
+                selectedVoice = englishVoices.find(v =>
                     malePatterns.some(p => v.name.toLowerCase().includes(p))
                 );
                 // If no male pattern found, try Google/Microsoft voices
                 if (!selectedVoice) {
-                    selectedVoice = englishVoices.find(v => 
+                    selectedVoice = englishVoices.find(v =>
                         (v.name.includes('Google') || v.name.includes('Microsoft')) &&
                         !femalePatterns.some(p => v.name.toLowerCase().includes(p))
                     );
                 }
             }
-            
+
             // Fallback to any English voice
             if (!selectedVoice) {
                 selectedVoice = englishVoices[0] || voices[0];
             }
-            
+
             if (selectedVoice) {
                 utterance.voice = selectedVoice;
                 console.log(`[BrowserTTS] Using voice: ${selectedVoice.name} for ${interviewerGender} interviewer`);
             }
-            
+
             // Chrome bug workaround: Chrome pauses speech synthesis after ~15 seconds
             // Keep speech alive with periodic resume calls
             let keepAliveInterval = null;
@@ -948,7 +948,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                     }
                 }, 10000); // Every 10 seconds
             };
-            
+
             const cleanup = () => {
                 if (keepAliveInterval) {
                     clearInterval(keepAliveInterval);
@@ -957,14 +957,14 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                 setIsSpeaking(false);
                 setAvatarState('idle');
             };
-            
+
             utterance.onstart = () => {
                 startKeepAlive();
             };
-            
+
             utterance.onend = cleanup;
             utterance.onerror = cleanup;
-            
+
             // Safety timeout: reset speaking state after a reasonable max duration
             // Estimate ~150 words per minute, average word is 5 chars
             const estimatedDuration = Math.max(10000, (text.length / 5) * 400 + 5000);
@@ -974,7 +974,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                 }
                 cleanup();
             }, estimatedDuration);
-            
+
             window.speechSynthesis.speak(utterance);
         } else {
             setIsSpeaking(false);
@@ -985,16 +985,16 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
     const startInterview = async () => {
         setIsProcessing(true);
         setAvatarState('thinking');
-        
+
         // Play session start sound
         if (soundEnabled) soundEffects.play('sessionStart');
-        
+
         try {
             const response = await fetch(`${API_URL}/interview/start`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ 
-                    topic: selectedTopic, 
+                body: JSON.stringify({
+                    topic: selectedTopic,
                     difficulty: selectedDifficulty,
                     company_style: selectedCompany,
                     enable_tts: enableTTS,
@@ -1005,14 +1005,14 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                 })
             });
             const data = await response.json();
-            
+
             setSessionId(data.session_id);
             setInterviewStarted(true);
             setConversationHistory([{ role: "assistant", content: data.opening_message }]);
             setQuestionCount(1);
             setRemainingTime(selectedDuration * 60);
             setAvatarState('idle');
-            
+
             // Speak the opening message
             if (enableTTS) {
                 speakText(data.opening_message);
@@ -1027,21 +1027,21 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
 
     const endInterview = async () => {
         if (!sessionId) return;
-        
+
         setIsProcessing(true);
-        
+
         // Play session end sound
         if (soundEnabled) soundEffects.play('sessionEnd');
-        
+
         // Store session ID before ending so we can save to history later
         const completedSessionId = sessionId;
-        
+
         try {
             const response = await fetch(`${API_URL}/interview/${sessionId}/end`, {
                 method: "POST"
             });
             const data = await response.json();
-            
+
             // Include session ID in summary for save-to-history functionality
             setSummary({ ...data, sessionId: completedSessionId });
             setShowSummary(true);
@@ -1049,12 +1049,12 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
             // Don't clear sessionId yet - keep it for save-to-history
             // setSessionId(null);
             setAvatarState('happy');
-            
+
             // Notify parent component about interview completion for XP tracking
             if (onInterviewComplete && data.score !== undefined) {
                 onInterviewComplete(data.score, selectedDifficulty, questionCount);
             }
-            
+
             // Save to interview history
             const history = JSON.parse(localStorage.getItem('interviewHistory') || '[]');
             history.unshift({
@@ -1110,16 +1110,16 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
         try {
             // Play start recording sound
             if (soundEnabled) soundEffects.play('startRecording');
-            
+
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            
+
             // Set up audio visualization
             audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
             analyserRef.current = audioContextRef.current.createAnalyser();
             const source = audioContextRef.current.createMediaStreamSource(stream);
             source.connect(analyserRef.current);
             analyserRef.current.fftSize = 256;
-            
+
             // Start visualization loop
             const updateLevel = () => {
                 if (!isRecording) return;
@@ -1129,7 +1129,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                 setAudioLevel(avg / 255);
                 requestAnimationFrame(updateLevel);
             };
-            
+
             mediaRecorderRef.current = new MediaRecorder(stream);
             chunksRef.current = [];
 
@@ -1158,7 +1158,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
             mediaRecorderRef.current.start();
             setAvatarState('listening');
             setIsRecording(true);
-            
+
             // Start visualization after recording starts
             requestAnimationFrame(function updateLevel() {
                 if (mediaRecorderRef.current?.state === 'recording' && analyserRef.current) {
@@ -1189,10 +1189,10 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
 
         setIsProcessing(true);
         setAvatarState('thinking');
-        
+
         // Play thinking sound
         if (soundEnabled) soundEffects.play('aiThinking');
-        
+
         const formData = new FormData();
         formData.append("file", blob, "audio.webm");
 
@@ -1203,7 +1203,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
             });
 
             const data = await response.json();
-            
+
             if (data.user_text) {
                 setConversationHistory(prev => [
                     ...prev,
@@ -1216,7 +1216,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                     ...prev,
                     { role: "assistant", content: data.ai_response }
                 ]);
-                
+
                 // Start TTS in parallel (non-blocking)
                 if (enableTTS) {
                     speakText(data.ai_response);
@@ -1228,7 +1228,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
             if (data.score) {
                 setCurrentScore(data.score);
                 setAllScores(prev => [...prev, data.score]);
-                
+
                 // Play appropriate sound based on score
                 if (soundEnabled) {
                     if (data.score >= 7) {
@@ -1260,10 +1260,10 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
 
         setIsProcessing(true);
         setAvatarState('thinking');
-        
+
         // Play thinking sound
         if (soundEnabled) soundEffects.play('aiThinking');
-        
+
         const formData = new FormData();
         formData.append("file", blob, "audio.webm");
         formData.append("confidence", expressionData?.confidence || 0);
@@ -1278,7 +1278,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
             });
 
             const data = await response.json();
-            
+
             // Update expression history
             if (data.expression_data) {
                 setVideoExpressionHistory(prev => [...prev, data.expression_data]);
@@ -1286,7 +1286,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
             if (data.video_metrics) {
                 setVideoMetrics(data.video_metrics);
             }
-            
+
             if (data.transcription) {
                 setConversationHistory(prev => [
                     ...prev,
@@ -1299,7 +1299,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                     ...prev,
                     { role: "assistant", content: data.response }
                 ]);
-                
+
                 // Use browser TTS if enabled
                 if (enableTTS) {
                     console.log('[Video TTS] Starting browser TTS for response length:', data.response.length);
@@ -1312,7 +1312,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
             if (data.score) {
                 setCurrentScore(data.score);
                 setAllScores(prev => [...prev, data.score]);
-                
+
                 // Play appropriate sound based on score
                 if (soundEnabled) {
                     if (data.score >= 7) {
@@ -1341,14 +1341,14 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
     // Video mode: End interview with expression data
     const endVideoInterview = async () => {
         if (!sessionId) return;
-        
+
         setIsProcessing(true);
-        
+
         // Play session end sound
         if (soundEnabled) soundEffects.play('sessionEnd');
-        
+
         const completedSessionId = sessionId;
-        
+
         try {
             const response = await fetch(`${API_URL}/interview/${sessionId}/video/end`, {
                 method: "POST",
@@ -1358,10 +1358,10 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                 })
             });
             const data = await response.json();
-            
+
             // Include video-specific data in summary
-            setSummary({ 
-                ...data, 
+            setSummary({
+                ...data,
                 sessionId: completedSessionId,
                 isVideoMode: true,
                 videoMetrics: data.video_metrics || videoMetrics,
@@ -1371,12 +1371,12 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
             setShowSummary(true);
             setInterviewStarted(false);
             setAvatarState('happy');
-            
+
             // Notify parent component
             if (onInterviewComplete && data.score !== undefined) {
                 onInterviewComplete(data.score, selectedDifficulty, questionCount);
             }
-            
+
             // Save to interview history
             const history = JSON.parse(localStorage.getItem('interviewHistory') || '[]');
             history.unshift({
@@ -1401,67 +1401,67 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
     // ============== AUTH MODAL COMPONENT ==============
     const renderAuthModal = () => {
         if (!showAuthModal) return null;
-        
+
         return (
             <div className="modal-overlay" onClick={() => setShowAuthModal(false)}>
                 <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
                     <button className="modal-close" onClick={() => setShowAuthModal(false)}>×</button>
                     <h2>{authMode === 'login' ? '🔐 Welcome Back!' : '🚀 Create Account'}</h2>
-                    
+
                     <form onSubmit={authMode === 'login' ? handleLogin : handleRegister}>
                         {authMode === 'register' && (
                             <div className="form-group">
                                 <label>Full Name</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     value={authFullName}
                                     onChange={(e) => setAuthFullName(e.target.value)}
                                     placeholder="Your Name"
                                 />
                             </div>
                         )}
-                        
+
                         <div className="form-group">
                             <label>Email</label>
-                            <input 
-                                type="email" 
+                            <input
+                                type="email"
                                 value={authEmail}
                                 onChange={(e) => setAuthEmail(e.target.value)}
                                 placeholder="your@email.com"
                                 required
                             />
                         </div>
-                        
+
                         {authMode === 'register' && (
                             <div className="form-group">
                                 <label>Username</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     value={authUsername}
                                     onChange={(e) => setAuthUsername(e.target.value)}
                                     placeholder="username (optional)"
                                 />
                             </div>
                         )}
-                        
+
                         <div className="form-group">
                             <label>Password</label>
-                            <input 
-                                type="password" 
+                            <input
+                                type="password"
                                 value={authPassword}
                                 onChange={(e) => setAuthPassword(e.target.value)}
                                 placeholder={authMode === 'register' ? 'Min 8 characters' : 'Your password'}
                                 required
                             />
                         </div>
-                        
+
                         {authError && <div className="auth-error">{authError}</div>}
-                        
+
                         <button type="submit" className="btn btn-primary auth-submit" disabled={isAuthLoading}>
                             {isAuthLoading ? 'Please wait...' : (authMode === 'login' ? 'Sign In' : 'Create Account')}
                         </button>
                     </form>
-                    
+
                     <div className="auth-switch">
                         {authMode === 'login' ? (
                             <p>Don't have an account? <button onClick={() => { setAuthMode('register'); resetAuthForm(); }}>Sign Up</button></p>
@@ -1473,7 +1473,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
             </div>
         );
     };
-    
+
     // ============== AUTH HEADER COMPONENT ==============
     const renderAuthHeader = () => (
         <div className="auth-header">
@@ -1502,7 +1502,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
             )}
         </div>
     );
-    
+
     // ============== NOTIFICATION COMPONENT ==============
     const renderNotification = () => {
         if (!notification) return null;
@@ -1557,7 +1557,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                 </div>
             );
         }
-        
+
         // Standard audio mode summary
         return (
             <div className="interview-container">
@@ -1571,7 +1571,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                         <span className="company-badge">{summary.company_style}</span>
                         <span className="difficulty-badge">{summary.difficulty}</span>
                     </div>
-                    
+
                     {summary.scores && summary.scores.average && (
                         <div className="score-summary">
                             <div className="score-circle">
@@ -1593,7 +1593,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                             <div className="chart-bars">
                                 {summary.scores.individual.map((score, idx) => (
                                     <div key={idx} className="chart-bar-container">
-                                        <div 
+                                        <div
                                             className={`chart-bar ${score >= 7 ? 'good' : score >= 5 ? 'ok' : 'poor'}`}
                                             style={{ height: `${score * 10}%` }}
                                         >
@@ -1608,14 +1608,14 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
 
                     {/* Phase 4: Question Feedback Section */}
                     <div className="feedback-section">
-                        <button 
+                        <button
                             onClick={fetchQuestionFeedback}
                             disabled={isLoadingFeedback}
                             className="btn btn-secondary"
                         >
                             {isLoadingFeedback ? "⏳ Generating..." : "📝 Get Detailed Feedback"}
                         </button>
-                        
+
                         {questionFeedback && questionFeedback.questions && (
                             <div className="question-feedback-list">
                                 <h4>Question-by-Question Analysis</h4>
@@ -1641,7 +1641,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                             </div>
                         )}
                     </div>
-                    
+
                     <div className="summary-content">
                         <h3>📋 Performance Analysis</h3>
                         <pre className="summary-text">{summary.summary}</pre>
@@ -1651,10 +1651,10 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                         <button onClick={resetInterview} className="btn btn-primary">
                             🔄 Start New Interview
                         </button>
-                        
+
                         {/* Guest user notice and save button */}
                         {summary.is_guest && !isAuthenticated && (
-                            <button 
+                            <button
                                 onClick={() => {
                                     if (onRequireAuth) {
                                         onRequireAuth();
@@ -1668,13 +1668,13 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                                 🔐 Login to Save Progress
                             </button>
                         )}
-                        
+
                         {isAuthenticated && (
                             <button onClick={handleSaveToHistory} className="btn btn-secondary">
                                 💾 Save to History
                             </button>
                         )}
-                        
+
                         <button onClick={handleGetAiCoaching} className="btn btn-secondary">
                             🎯 Get AI Coaching
                         </button>
@@ -1685,7 +1685,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                             📤 Share Results
                         </button>
                     </div>
-                    
+
                     {/* Guest notice */}
                     {summary.is_guest && !isAuthenticated && (
                         <div className="guest-notice-banner">
@@ -1693,7 +1693,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                             <p>Create an account or login to save your history, track progress, and unlock achievements!</p>
                         </div>
                     )}
-                    
+
                     {/* AI Coaching Results */}
                     {(aiCoaching || improvementPlan) && (
                         <div className="ai-coaching-section">
@@ -1707,13 +1707,13 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                                     {aiCoaching?.coaching && (
                                         <div className="ai-coaching-card">
                                             <h3>🤖 AI Coaching Feedback</h3>
-                                            
+
                                             {aiCoaching.coaching.overall_grade && (
                                                 <div className="coaching-grade">
                                                     Grade: <span className="grade-value">{aiCoaching.coaching.overall_grade}</span>
                                                 </div>
                                             )}
-                                            
+
                                             {aiCoaching.coaching.key_strengths && (
                                                 <div className="coaching-section">
                                                     <h4>✅ Key Strengths</h4>
@@ -1724,7 +1724,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                                                     </ul>
                                                 </div>
                                             )}
-                                            
+
                                             {aiCoaching.coaching.critical_improvements && (
                                                 <div className="coaching-section">
                                                     <h4>📈 Critical Improvements</h4>
@@ -1735,7 +1735,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                                                     </ul>
                                                 </div>
                                             )}
-                                            
+
                                             {aiCoaching.coaching.practice_exercises && (
                                                 <div className="coaching-section">
                                                     <h4>🏋️ Practice Exercises</h4>
@@ -1750,7 +1750,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                                                     </div>
                                                 </div>
                                             )}
-                                            
+
                                             {aiCoaching.coaching.motivational_note && (
                                                 <div className="motivational-note">
                                                     💪 {aiCoaching.coaching.motivational_note}
@@ -1758,12 +1758,12 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                                             )}
                                         </div>
                                     )}
-                                    
+
                                     {improvementPlan && (
                                         <div className="improvement-plan-card">
                                             <h3>📅 Your Improvement Plan</h3>
                                             <p className="plan-duration">Estimated Duration: {improvementPlan.estimated_duration}</p>
-                                            
+
                                             <div className="plan-timeline">
                                                 {improvementPlan.improvement_plan?.map((item, i) => (
                                                     <div key={i} className="plan-week">
@@ -1780,7 +1780,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                                                     </div>
                                                 ))}
                                             </div>
-                                            
+
                                             <div className="success-criteria">
                                                 <h4>🎯 Success Criteria</h4>
                                                 <div className="criteria-grid">
@@ -1822,7 +1822,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                 {renderAuthModal()}
                 <div className="setup-card">
                     <h2>🎯 Setup Your ProCoach AI Interview</h2>
-                    
+
                     {/* Progress Steps */}
                     <div className="setup-progress">
                         <div className={`progress-step ${setupStep >= 1 ? 'active' : ''}`}>
@@ -1847,8 +1847,8 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                             <>
                                 <div className="form-group">
                                     <label>📚 Interview Topic:</label>
-                                    <select 
-                                        value={selectedTopic} 
+                                    <select
+                                        value={selectedTopic}
                                         onChange={(e) => setSelectedTopic(e.target.value)}
                                         className="topic-select"
                                     >
@@ -1859,11 +1859,11 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                                         ))}
                                     </select>
                                 </div>
-                                
+
                                 <div className="form-group">
                                     <label>🏢 Company Style:</label>
-                                    <select 
-                                        value={selectedCompany} 
+                                    <select
+                                        value={selectedCompany}
                                         onChange={(e) => setSelectedCompany(e.target.value)}
                                         className="topic-select"
                                     >
@@ -1874,7 +1874,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                                         ))}
                                     </select>
                                 </div>
-                                
+
                                 <div className="form-group">
                                     <label>📊 Difficulty Level:</label>
                                     <div className="difficulty-buttons">
@@ -1889,7 +1889,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                                         ))}
                                     </div>
                                 </div>
-                                
+
                                 <div className="form-group">
                                     <label>🎬 Interview Mode:</label>
                                     <div className="mode-buttons">
@@ -1919,7 +1919,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                                         </div>
                                     )}
                                 </div>
-                                
+
                                 <div className="form-group interviewer-selection">
                                     <label>👤 Choose Your Interviewer:</label>
                                     <div className="interviewer-cards">
@@ -1930,20 +1930,20 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                                             whileTap={{ scale: 0.98 }}
                                         >
                                             <div className="interviewer-preview">
-                                                <img 
-                                                    src="/assets/interviewer_male.png" 
+                                                <img
+                                                    src="/assets/interviewer_male.png"
                                                     alt="Male Interviewer"
                                                     className={`interviewer-img ${interviewerGender === 'male' ? 'selected' : ''}`}
                                                 />
                                                 {interviewerGender === 'male' && <div className="preview-glow male" />}
                                             </div>
                                             <div className="interviewer-info">
-                                                <span className="interviewer-name">James</span>
+                                                <span className="interviewer-name">Saurabh</span>
                                                 <span className="interviewer-role">Senior Technical Interviewer</span>
                                                 <span className="interviewer-voice">🎙️ Professional Male Voice</span>
                                             </div>
                                             {interviewerGender === 'male' && (
-                                                <motion.div 
+                                                <motion.div
                                                     className="selected-badge"
                                                     initial={{ scale: 0 }}
                                                     animate={{ scale: 1 }}
@@ -1952,7 +1952,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                                                 </motion.div>
                                             )}
                                         </motion.button>
-                                        
+
                                         <motion.button
                                             className={`interviewer-card female ${interviewerGender === 'female' ? 'active' : ''}`}
                                             onClick={() => setInterviewerGender('female')}
@@ -1960,8 +1960,8 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                                             whileTap={{ scale: 0.98 }}
                                         >
                                             <div className="interviewer-preview">
-                                                <img 
-                                                    src="/assets/interviewer_female.png" 
+                                                <img
+                                                    src="/assets/interviewer_female.png"
                                                     alt="Female Interviewer"
                                                     className={`interviewer-img ${interviewerGender === 'female' ? 'selected' : ''}`}
                                                 />
@@ -1973,7 +1973,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                                                 <span className="interviewer-voice">🎙️ Professional Female Voice</span>
                                             </div>
                                             {interviewerGender === 'female' && (
-                                                <motion.div 
+                                                <motion.div
                                                     className="selected-badge"
                                                     initial={{ scale: 0 }}
                                                     animate={{ scale: 1 }}
@@ -1984,7 +1984,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                                         </motion.button>
                                     </div>
                                 </div>
-                                
+
                                 <div className="form-group">
                                     <label>⏱️ Interview Duration:</label>
                                     <div className="duration-buttons">
@@ -1999,28 +1999,28 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                                         ))}
                                     </div>
                                 </div>
-                                
+
                                 <div className="form-group toggle-group">
                                     <label>🔊 AI Voice (TTS):</label>
-                                    <button 
+                                    <button
                                         className={`toggle-btn ${enableTTS ? 'active' : ''}`}
                                         onClick={() => setEnableTTS(!enableTTS)}
                                     >
                                         {enableTTS ? '✅ On' : '❌ Off'}
                                     </button>
                                 </div>
-                                
+
                                 {enableTTS && (
                                     <div className="form-group">
                                         <p className="form-hint">
-                                            💡 Voice uses your browser's built-in text-to-speech. 
+                                            💡 Voice uses your browser's built-in text-to-speech.
                                             {interviewerGender === 'female' ? ' A female voice will be selected.' : ' A male voice will be selected.'}
                                         </p>
                                     </div>
                                 )}
-                                
-                                <button 
-                                    onClick={() => setSetupStep(2)} 
+
+                                <button
+                                    onClick={() => setSetupStep(2)}
                                     className="btn btn-primary btn-large"
                                 >
                                     Next: Add Context →
@@ -2034,8 +2034,8 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                                 <div className="form-group">
                                     <label>📄 Upload Resume (Optional):</label>
                                     <p className="form-hint">AI will personalize questions based on your experience</p>
-                                    <input 
-                                        type="file" 
+                                    <input
+                                        type="file"
                                         accept=".txt,.pdf,.doc,.docx"
                                         onChange={handleResumeUpload}
                                         className="file-input"
@@ -2052,11 +2052,11 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                                         </div>
                                     )}
                                 </div>
-                                
+
                                 <div className="form-group">
                                     <label>📋 Job Description (Optional):</label>
                                     <p className="form-hint">Paste job description to focus on relevant skills</p>
-                                    <textarea 
+                                    <textarea
                                         value={jobDescription}
                                         onChange={(e) => setJobDescription(e.target.value)}
                                         placeholder="Paste the job description here..."
@@ -2064,16 +2064,16 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                                         rows={5}
                                     />
                                 </div>
-                                
+
                                 <div className="button-group">
-                                    <button 
-                                        onClick={() => setSetupStep(1)} 
+                                    <button
+                                        onClick={() => setSetupStep(1)}
                                         className="btn btn-secondary"
                                     >
                                         ← Back
                                     </button>
-                                    <button 
-                                        onClick={() => setSetupStep(3)} 
+                                    <button
+                                        onClick={() => setSetupStep(3)}
                                         className="btn btn-primary"
                                     >
                                         Next: Review →
@@ -2122,22 +2122,22 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                                         <span className="config-value">{jobDescription ? '✅ Provided' : '❌ Not provided'}</span>
                                     </div>
                                 </div>
-                                
+
                                 <div className="button-group">
-                                    <button 
-                                        onClick={() => setSetupStep(2)} 
+                                    <button
+                                        onClick={() => setSetupStep(2)}
                                         className="btn btn-secondary"
                                     >
                                         ← Back
                                     </button>
-                                    <button 
+                                    <button
                                         onClick={() => {
                                             if (interviewMode === 'video') {
                                                 setShowVideoPreview(true);
                                             } else {
                                                 startInterview();
                                             }
-                                        }} 
+                                        }}
                                         disabled={isProcessing}
                                         className="btn btn-primary"
                                     >
@@ -2148,7 +2148,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                         )}
                     </div>
                 </div>
-                
+
                 {/* Video Preview Modal */}
                 {showVideoPreview && (
                     <div className="video-preview-overlay">
@@ -2197,9 +2197,9 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
             {renderAuthModal()}
             {/* Hidden audio element for TTS */}
             <audio ref={ttsAudioRef} style={{ display: 'none' }} />
-            
+
             {/* Interview Timer Bar */}
-            <motion.div 
+            <motion.div
                 className={`timer-bar ${isTimeWarning ? 'warning' : ''} ${isTimeUp ? 'time-up' : ''}`}
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -2211,18 +2211,18 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                     </span>
                 </div>
                 <div className="timer-progress">
-                    <motion.div 
-                        className="timer-progress-bar" 
+                    <motion.div
+                        className="timer-progress-bar"
                         initial={{ width: 0 }}
                         animate={{ width: `${Math.min(100, (elapsedTime / (selectedDuration * 60)) * 100)}%` }}
                         transition={{ duration: 0.5 }}
                     />
                 </div>
             </motion.div>
-            
+
             <div className="interview-header">
                 <div className="header-info">
-                    <motion.span 
+                    <motion.span
                         className="topic-badge"
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
@@ -2238,14 +2238,14 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                 </div>
                 <div className="header-actions">
                     {isSpeaking && <span className="speaking-indicator">🔊 Speaking...</span>}
-                    <button 
+                    <button
                         onClick={() => setSoundEnabled(!soundEnabled)}
                         className={`btn btn-small btn-ghost ${soundEnabled ? '' : 'muted'}`}
                         title={soundEnabled ? 'Mute sounds' : 'Unmute sounds'}
                     >
                         {soundEnabled ? '🔊' : '🔇'}
                     </button>
-                    <button 
+                    <button
                         onClick={() => { setShowCoaching(!showCoaching); if (!showCoaching) fetchLiveCoaching(); }}
                         className={`btn btn-coaching ${showCoaching ? 'active' : ''}`}
                     >
@@ -2256,11 +2256,11 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                     </button>
                 </div>
             </div>
-            
+
             {/* Two Column Layout - Avatar Left, Content Right */}
             <div className="interview-main-grid">
                 {/* Left Side - AI Avatar Panel */}
-                <motion.aside 
+                <motion.aside
                     className="avatar-panel"
                     initial={{ opacity: 0, x: -50 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -2268,7 +2268,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                 >
                     <div className="ai-avatar-section">
                         {/* 3D Avatar with GLB model - gender based on voice selection */}
-                        <Avatar3D 
+                        <Avatar3D
                             state={avatarState}
                             audioLevel={audioLevel}
                             score={currentScore}
@@ -2278,7 +2278,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                             isSpeaking={isSpeaking}
                         />
                         {isSpeaking && (
-                            <AudioVisualizer 
+                            <AudioVisualizer
                                 mode="circular"
                                 isActive={true}
                                 audioLevel={0.5 + Math.random() * 0.3}
@@ -2287,7 +2287,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                             />
                         )}
                     </div>
-                    
+
                     {/* Avatar Name Badge */}
                     <div className="avatar-name-badge">
                         <span className="avatar-status-dot" />
@@ -2295,293 +2295,293 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                         <span className="avatar-role">AI Interviewer</span>
                     </div>
                 </motion.aside>
-                
+
                 {/* Right Side - Content Panel */}
                 <div className="content-panel">
-            
-            {/* Phase 6: Live Coaching Panel */}
-            <AnimatePresence>
-            {showCoaching && (
-                <motion.div 
-                    className="coaching-panel"
-                    initial={{ opacity: 0, x: 300 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 300 }}
-                >
-                    <div className="coaching-header">
-                        <h3>🎯 Live Interview Coach</h3>
-                        <button className="close-btn" onClick={() => setShowCoaching(false)}>×</button>
-                    </div>
-                    
-                    {isLoadingCoaching ? (
-                        <div className="coaching-loading">
-                            <div className="spinner"></div>
-                            <p>Analyzing your performance...</p>
-                        </div>
-                    ) : liveCoaching ? (
-                        <div className="coaching-content">
-                            {/* Overall Status */}
-                            <div className={`coaching-status ${liveCoaching.overall_performance?.score >= 7 ? 'good' : liveCoaching.overall_performance?.score >= 5 ? 'ok' : 'needs-work'}`}>
-                                <span className="status-emoji">{liveCoaching.overall_performance?.emoji}</span>
-                                <div className="status-info">
-                                    <span className="status-score">{liveCoaching.overall_performance?.score}/10</span>
-                                    <span className="status-message">{liveCoaching.overall_performance?.message}</span>
+
+                    {/* Phase 6: Live Coaching Panel */}
+                    <AnimatePresence>
+                        {showCoaching && (
+                            <motion.div
+                                className="coaching-panel"
+                                initial={{ opacity: 0, x: 300 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 300 }}
+                            >
+                                <div className="coaching-header">
+                                    <h3>🎯 Live Interview Coach</h3>
+                                    <button className="close-btn" onClick={() => setShowCoaching(false)}>×</button>
                                 </div>
-                            </div>
-                            
-                            {/* Key Metrics */}
-                            <div className="coaching-metrics">
-                                <div className="metric">
-                                    <span className="metric-label">Confidence</span>
-                                    <div className="metric-bar">
-                                        <div className="metric-fill" style={{width: `${(liveCoaching.metrics?.confidence_score || 0) * 10}%`}}></div>
+
+                                {isLoadingCoaching ? (
+                                    <div className="coaching-loading">
+                                        <div className="spinner"></div>
+                                        <p>Analyzing your performance...</p>
                                     </div>
-                                    <span className="metric-value">{liveCoaching.metrics?.confidence_score}/10</span>
-                                </div>
-                                <div className="metric">
-                                    <span className="metric-label">Filler Words</span>
-                                    <div className="metric-bar">
-                                        <div className="metric-fill warning" style={{width: `${Math.min(100, (liveCoaching.metrics?.filler_ratio_percent || 0) * 5)}%`}}></div>
-                                    </div>
-                                    <span className="metric-value">{liveCoaching.metrics?.filler_ratio_percent}%</span>
-                                </div>
-                                <div className="metric">
-                                    <span className="metric-label">STAR Method</span>
-                                    <div className="metric-bar">
-                                        <div className="metric-fill" style={{width: `${liveCoaching.metrics?.star_completeness_percent || 0}%`}}></div>
-                                    </div>
-                                    <span className="metric-value">{liveCoaching.metrics?.star_completeness_percent}%</span>
-                                </div>
-                            </div>
-                            
-                            {/* Top Filler Words */}
-                            {liveCoaching.top_filler_words && liveCoaching.top_filler_words.length > 0 && (
-                                <div className="filler-words-section">
-                                    <h4>⚠️ Your Top Filler Words</h4>
-                                    <div className="filler-tags">
-                                        {liveCoaching.top_filler_words.map(([word, count], idx) => (
-                                            <span key={idx} className="filler-tag">"{word}" × {count}</span>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                            
-                            {/* Strengths & Improvements */}
-                            <div className="coaching-feedback">
-                                {liveCoaching.strengths?.length > 0 && (
-                                    <div className="feedback-section strengths">
-                                        <h4>✅ Strengths</h4>
-                                        <ul>
-                                            {liveCoaching.strengths.map((s, i) => <li key={i}>{s}</li>)}
-                                        </ul>
-                                    </div>
-                                )}
-                                {liveCoaching.improvements?.length > 0 && (
-                                    <div className="feedback-section improvements">
-                                        <h4>📈 Areas to Improve</h4>
-                                        <ul>
-                                            {liveCoaching.improvements.map((s, i) => <li key={i}>{s}</li>)}
-                                        </ul>
-                                    </div>
-                                )}
-                            </div>
-                            
-                            {/* Quick Tips */}
-                            <div className="quick-tips">
-                                <h4>💡 Quick Tips</h4>
-                                {liveCoaching.quick_tips?.map((tip, i) => (
-                                    <div key={i} className="tip">{tip}</div>
-                                ))}
-                            </div>
-                            
-                            {/* Action Buttons */}
-                            <div className="coaching-actions">
-                                <button onClick={fetchSpeechAnalysis} className="btn btn-secondary btn-small">
-                                    📊 Speech Analysis
-                                </button>
-                                <button onClick={fetchLiveCoaching} className="btn btn-secondary btn-small">
-                                    🔄 Refresh
-                                </button>
-                            </div>
-                            
-                            {/* Speech Analysis Results */}
-                            {speechAnalysis && (
-                                <div className="speech-analysis-detail">
-                                    <h4>📊 Last Answer Analysis</h4>
-                                    <div className="analysis-grid">
-                                        <div className="analysis-item">
-                                            <span className="label">Words</span>
-                                            <span className="value">{speechAnalysis.speech_quality?.word_count}</span>
+                                ) : liveCoaching ? (
+                                    <div className="coaching-content">
+                                        {/* Overall Status */}
+                                        <div className={`coaching-status ${liveCoaching.overall_performance?.score >= 7 ? 'good' : liveCoaching.overall_performance?.score >= 5 ? 'ok' : 'needs-work'}`}>
+                                            <span className="status-emoji">{liveCoaching.overall_performance?.emoji}</span>
+                                            <div className="status-info">
+                                                <span className="status-score">{liveCoaching.overall_performance?.score}/10</span>
+                                                <span className="status-message">{liveCoaching.overall_performance?.message}</span>
+                                            </div>
                                         </div>
-                                        <div className="analysis-item">
-                                            <span className="label">Clarity</span>
-                                            <span className="value">{speechAnalysis.speech_quality?.clarity_score}/10</span>
-                                        </div>
-                                        <div className="analysis-item">
-                                            <span className="label">Confidence</span>
-                                            <span className="value">{speechAnalysis.speech_quality?.confidence_score}/10</span>
-                                        </div>
-                                        <div className="analysis-item">
-                                            <span className="label">STAR</span>
-                                            <span className="value">{speechAnalysis.star_analysis?.completeness_percent}%</span>
-                                        </div>
-                                    </div>
-                                    
-                                    {/* STAR Components */}
-                                    <div className="star-breakdown">
-                                        <div className={`star-component ${speechAnalysis.star_analysis?.detected_components?.situation ? 'found' : ''}`}>S</div>
-                                        <div className={`star-component ${speechAnalysis.star_analysis?.detected_components?.task ? 'found' : ''}`}>T</div>
-                                        <div className={`star-component ${speechAnalysis.star_analysis?.detected_components?.action ? 'found' : ''}`}>A</div>
-                                        <div className={`star-component ${speechAnalysis.star_analysis?.detected_components?.result ? 'found' : ''}`}>R</div>
-                                    </div>
-                                    
-                                    {/* Coaching Tips */}
-                                    {speechAnalysis.coaching_tips?.length > 0 && (
-                                        <div className="coaching-tips-list">
-                                            {speechAnalysis.coaching_tips.slice(0, 3).map((tip, i) => (
-                                                <div key={i} className={`coaching-tip ${tip.priority}`}>
-                                                    <span className="tip-icon">{tip.icon}</span>
-                                                    <div className="tip-content">
-                                                        <strong>{tip.title}</strong>
-                                                        <p>{tip.tip}</p>
-                                                    </div>
+
+                                        {/* Key Metrics */}
+                                        <div className="coaching-metrics">
+                                            <div className="metric">
+                                                <span className="metric-label">Confidence</span>
+                                                <div className="metric-bar">
+                                                    <div className="metric-fill" style={{ width: `${(liveCoaching.metrics?.confidence_score || 0) * 10}%` }}></div>
                                                 </div>
+                                                <span className="metric-value">{liveCoaching.metrics?.confidence_score}/10</span>
+                                            </div>
+                                            <div className="metric">
+                                                <span className="metric-label">Filler Words</span>
+                                                <div className="metric-bar">
+                                                    <div className="metric-fill warning" style={{ width: `${Math.min(100, (liveCoaching.metrics?.filler_ratio_percent || 0) * 5)}%` }}></div>
+                                                </div>
+                                                <span className="metric-value">{liveCoaching.metrics?.filler_ratio_percent}%</span>
+                                            </div>
+                                            <div className="metric">
+                                                <span className="metric-label">STAR Method</span>
+                                                <div className="metric-bar">
+                                                    <div className="metric-fill" style={{ width: `${liveCoaching.metrics?.star_completeness_percent || 0}%` }}></div>
+                                                </div>
+                                                <span className="metric-value">{liveCoaching.metrics?.star_completeness_percent}%</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Top Filler Words */}
+                                        {liveCoaching.top_filler_words && liveCoaching.top_filler_words.length > 0 && (
+                                            <div className="filler-words-section">
+                                                <h4>⚠️ Your Top Filler Words</h4>
+                                                <div className="filler-tags">
+                                                    {liveCoaching.top_filler_words.map(([word, count], idx) => (
+                                                        <span key={idx} className="filler-tag">"{word}" × {count}</span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Strengths & Improvements */}
+                                        <div className="coaching-feedback">
+                                            {liveCoaching.strengths?.length > 0 && (
+                                                <div className="feedback-section strengths">
+                                                    <h4>✅ Strengths</h4>
+                                                    <ul>
+                                                        {liveCoaching.strengths.map((s, i) => <li key={i}>{s}</li>)}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                            {liveCoaching.improvements?.length > 0 && (
+                                                <div className="feedback-section improvements">
+                                                    <h4>📈 Areas to Improve</h4>
+                                                    <ul>
+                                                        {liveCoaching.improvements.map((s, i) => <li key={i}>{s}</li>)}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Quick Tips */}
+                                        <div className="quick-tips">
+                                            <h4>💡 Quick Tips</h4>
+                                            {liveCoaching.quick_tips?.map((tip, i) => (
+                                                <div key={i} className="tip">{tip}</div>
                                             ))}
                                         </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    ) : (
-                        <div className="coaching-empty">
-                            <p>Answer a few questions to receive coaching feedback.</p>
-                            <button onClick={fetchLiveCoaching} className="btn btn-primary">
-                                Get Coaching
-                            </button>
-                        </div>
-                    )}
-                </motion.div>
-            )}
-            </AnimatePresence>
 
-            <div className="chat-container">
-                {conversationHistory.map((msg, index) => (
-                    <div key={index} className={`message ${msg.role}`}>
-                        <div className="message-avatar">
-                            {msg.role === "assistant" ? "🤖" : "👤"}
-                        </div>
-                        <div className="message-content">
-                            <div className="message-header">
-                                <span className="message-role">
-                                    {msg.role === "assistant" ? "Interviewer" : "You"}
-                                </span>
-                                {msg.score && (
-                                    <span className="message-score">Score: {msg.score}/10</span>
+                                        {/* Action Buttons */}
+                                        <div className="coaching-actions">
+                                            <button onClick={fetchSpeechAnalysis} className="btn btn-secondary btn-small">
+                                                📊 Speech Analysis
+                                            </button>
+                                            <button onClick={fetchLiveCoaching} className="btn btn-secondary btn-small">
+                                                🔄 Refresh
+                                            </button>
+                                        </div>
+
+                                        {/* Speech Analysis Results */}
+                                        {speechAnalysis && (
+                                            <div className="speech-analysis-detail">
+                                                <h4>📊 Last Answer Analysis</h4>
+                                                <div className="analysis-grid">
+                                                    <div className="analysis-item">
+                                                        <span className="label">Words</span>
+                                                        <span className="value">{speechAnalysis.speech_quality?.word_count}</span>
+                                                    </div>
+                                                    <div className="analysis-item">
+                                                        <span className="label">Clarity</span>
+                                                        <span className="value">{speechAnalysis.speech_quality?.clarity_score}/10</span>
+                                                    </div>
+                                                    <div className="analysis-item">
+                                                        <span className="label">Confidence</span>
+                                                        <span className="value">{speechAnalysis.speech_quality?.confidence_score}/10</span>
+                                                    </div>
+                                                    <div className="analysis-item">
+                                                        <span className="label">STAR</span>
+                                                        <span className="value">{speechAnalysis.star_analysis?.completeness_percent}%</span>
+                                                    </div>
+                                                </div>
+
+                                                {/* STAR Components */}
+                                                <div className="star-breakdown">
+                                                    <div className={`star-component ${speechAnalysis.star_analysis?.detected_components?.situation ? 'found' : ''}`}>S</div>
+                                                    <div className={`star-component ${speechAnalysis.star_analysis?.detected_components?.task ? 'found' : ''}`}>T</div>
+                                                    <div className={`star-component ${speechAnalysis.star_analysis?.detected_components?.action ? 'found' : ''}`}>A</div>
+                                                    <div className={`star-component ${speechAnalysis.star_analysis?.detected_components?.result ? 'found' : ''}`}>R</div>
+                                                </div>
+
+                                                {/* Coaching Tips */}
+                                                {speechAnalysis.coaching_tips?.length > 0 && (
+                                                    <div className="coaching-tips-list">
+                                                        {speechAnalysis.coaching_tips.slice(0, 3).map((tip, i) => (
+                                                            <div key={i} className={`coaching-tip ${tip.priority}`}>
+                                                                <span className="tip-icon">{tip.icon}</span>
+                                                                <div className="tip-content">
+                                                                    <strong>{tip.title}</strong>
+                                                                    <p>{tip.tip}</p>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="coaching-empty">
+                                        <p>Answer a few questions to receive coaching feedback.</p>
+                                        <button onClick={fetchLiveCoaching} className="btn btn-primary">
+                                            Get Coaching
+                                        </button>
+                                    </div>
                                 )}
-                            </div>
-                            <p>{msg.content}</p>
-                        </div>
-                    </div>
-                ))}
-                
-                {isProcessing && (
-                    <div className="message assistant">
-                        <div className="message-avatar">🤖</div>
-                        <div className="message-content">
-                            <span className="message-role">Interviewer</span>
-                            <div className="typing-indicator">
-                                <span></span><span></span><span></span>
-                            </div>
-                        </div>
-                    </div>
-                )}
-                <div ref={chatEndRef} />
-            </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
-            <motion.div 
-                className="recording-controls"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-            >
-                {/* Enhanced Audio Visualizer */}
-                <AnimatePresence>
-                    {isRecording && (
-                        <motion.div 
-                            className="recording-visualizer-enhanced"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                        >
-                            <div className="recording-timer">
-                                <motion.span 
-                                    className="rec-dot"
-                                    animate={{ opacity: [1, 0.3, 1] }}
-                                    transition={{ duration: 1, repeat: Infinity }}
-                                />
-                                REC {formatTime(recordingTime)}
+                    <div className="chat-container">
+                        {conversationHistory.map((msg, index) => (
+                            <div key={index} className={`message ${msg.role}`}>
+                                <div className="message-avatar">
+                                    {msg.role === "assistant" ? "🤖" : "👤"}
+                                </div>
+                                <div className="message-content">
+                                    <div className="message-header">
+                                        <span className="message-role">
+                                            {msg.role === "assistant" ? "Interviewer" : "You"}
+                                        </span>
+                                        {msg.score && (
+                                            <span className="message-score">Score: {msg.score}/10</span>
+                                        )}
+                                    </div>
+                                    <p>{msg.content}</p>
+                                </div>
                             </div>
-                            <AudioVisualizer 
-                                mode={visualizerMode}
-                                isActive={isRecording}
-                                audioLevel={audioLevel}
-                                color="danger"
-                                size="medium"
-                            />
-                            <div className="visualizer-mode-selector">
-                                {['bars', 'wave', 'circular', 'orb'].map(mode => (
-                                    <button
-                                        key={mode}
-                                        className={`mode-btn ${visualizerMode === mode ? 'active' : ''}`}
-                                        onClick={() => setVisualizerMode(mode)}
-                                    >
-                                        {mode === 'bars' && '📊'}
-                                        {mode === 'wave' && '〰️'}
-                                        {mode === 'circular' && '⭕'}
-                                        {mode === 'orb' && '🔮'}
-                                    </button>
-                                ))}
+                        ))}
+
+                        {isProcessing && (
+                            <div className="message assistant">
+                                <div className="message-avatar">🤖</div>
+                                <div className="message-content">
+                                    <span className="message-role">Interviewer</span>
+                                    <div className="typing-indicator">
+                                        <span></span><span></span><span></span>
+                                    </div>
+                                </div>
                             </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-                
-                {/* Enhanced Record Button */}
-                <RecordButton
-                    isRecording={isRecording}
-                    isProcessing={isProcessing}
-                    isDisabled={isSpeaking}
-                    audioLevel={audioLevel}
-                    onStart={startRecording}
-                    onStop={stopRecording}
-                    size="large"
-                    showLevel={true}
-                    label={true}
-                />
-                
-                {/* Processing Indicator */}
-                <AnimatePresence>
-                    {isProcessing && !isRecording && (
-                        <motion.div 
-                            className="processing-indicator"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                        >
-                            <TypingIndicator variant="wave" color="primary" text="AI is thinking..." />
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-                
-                {audioURL && !isProcessing && !isRecording && (
+                        )}
+                        <div ref={chatEndRef} />
+                    </div>
+
                     <motion.div
-                        initial={{ opacity: 0, y: 10 }}
+                        className="recording-controls"
+                        initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
                     >
-                        <audio src={audioURL} controls className="audio-playback" />
+                        {/* Enhanced Audio Visualizer */}
+                        <AnimatePresence>
+                            {isRecording && (
+                                <motion.div
+                                    className="recording-visualizer-enhanced"
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.9 }}
+                                >
+                                    <div className="recording-timer">
+                                        <motion.span
+                                            className="rec-dot"
+                                            animate={{ opacity: [1, 0.3, 1] }}
+                                            transition={{ duration: 1, repeat: Infinity }}
+                                        />
+                                        REC {formatTime(recordingTime)}
+                                    </div>
+                                    <AudioVisualizer
+                                        mode={visualizerMode}
+                                        isActive={isRecording}
+                                        audioLevel={audioLevel}
+                                        color="danger"
+                                        size="medium"
+                                    />
+                                    <div className="visualizer-mode-selector">
+                                        {['bars', 'wave', 'circular', 'orb'].map(mode => (
+                                            <button
+                                                key={mode}
+                                                className={`mode-btn ${visualizerMode === mode ? 'active' : ''}`}
+                                                onClick={() => setVisualizerMode(mode)}
+                                            >
+                                                {mode === 'bars' && '📊'}
+                                                {mode === 'wave' && '〰️'}
+                                                {mode === 'circular' && '⭕'}
+                                                {mode === 'orb' && '🔮'}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        {/* Enhanced Record Button */}
+                        <RecordButton
+                            isRecording={isRecording}
+                            isProcessing={isProcessing}
+                            isDisabled={isSpeaking}
+                            audioLevel={audioLevel}
+                            onStart={startRecording}
+                            onStop={stopRecording}
+                            size="large"
+                            showLevel={true}
+                            label={true}
+                        />
+
+                        {/* Processing Indicator */}
+                        <AnimatePresence>
+                            {isProcessing && !isRecording && (
+                                <motion.div
+                                    className="processing-indicator"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                >
+                                    <TypingIndicator variant="wave" color="primary" text="AI is thinking..." />
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        {audioURL && !isProcessing && !isRecording && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                            >
+                                <audio src={audioURL} controls className="audio-playback" />
+                            </motion.div>
+                        )}
                     </motion.div>
-                )}
-            </motion.div>
                 </div> {/* End content-panel */}
             </div> {/* End interview-main-grid */}
         </div>
