@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { 
+import {
     ChevronRight, Users, Target, TrendingUp, Award,
     Mic, Brain, BarChart2, Shield, Zap, Star, Play, ArrowRight,
     CheckCircle, MessageSquare, Clock
@@ -24,8 +24,8 @@ const LandingPage = ({ onStartSetup, stats }) => {
 
     const itemVariants = {
         hidden: { opacity: 0, y: 30 },
-        visible: { 
-            opacity: 1, 
+        visible: {
+            opacity: 1,
             y: 0,
             transition: { duration: 0.6, ease: "easeOut" }
         }
@@ -73,26 +73,10 @@ const LandingPage = ({ onStartSetup, stats }) => {
         }
     ];
 
-    const testimonials = [
-        {
-            quote: "ProCoach AI helped me land my dream job at a top tech company!",
-            author: "Sarah K.",
-            role: "Software Engineer"
-        },
-        {
-            quote: "The AI feedback is incredibly accurate and actionable.",
-            author: "Michael R.",
-            role: "Product Manager"
-        },
-        {
-            quote: "Best interview prep tool I've ever used. Highly recommend!",
-            author: "Emily T.",
-            role: "Data Scientist"
-        }
-    ];
+
 
     return (
-        <motion.div 
+        <motion.div
             className="landing-page"
             variants={containerVariants}
             initial="hidden"
@@ -103,7 +87,7 @@ const LandingPage = ({ onStartSetup, stats }) => {
                 <div className="hero-split-container">
                     {/* Left Side - Content */}
                     <div className="hero-content-left">
-                        <motion.div 
+                        <motion.div
                             className="hero-badge"
                             whileHover={{ scale: 1.05 }}
                             animate={floatingAnimation}
@@ -119,7 +103,7 @@ const LandingPage = ({ onStartSetup, stats }) => {
                         </h1>
 
                         <p className="hero-subtitle">
-                            Your personal AI coach and mock interviewer. Master technical interviews 
+                            Your personal AI coach and mock interviewer. Master technical interviews
                             with real-time feedback, voice practice, and personalized coaching.
                         </p>
 
@@ -152,7 +136,7 @@ const LandingPage = ({ onStartSetup, stats }) => {
                             <p className="cta-note">No credit card required • Start free</p>
                         </div>
 
-                        <motion.div 
+                        <motion.div
                             className="hero-stats"
                             variants={itemVariants}
                         >
@@ -177,7 +161,7 @@ const LandingPage = ({ onStartSetup, stats }) => {
                     </div>
 
                     {/* Right Side - Animation */}
-                    <motion.div 
+                    <motion.div
                         className="hero-illustration-right"
                         initial={{ opacity: 0, x: 50, scale: 0.95 }}
                         animate={{ opacity: 1, x: 0, scale: 1 }}
@@ -227,7 +211,7 @@ const LandingPage = ({ onStartSetup, stats }) => {
                 </div>
 
                 <div className="steps-container">
-                    <motion.div 
+                    <motion.div
                         className="step-card"
                         whileHover={{ scale: 1.02 }}
                     >
@@ -243,7 +227,7 @@ const LandingPage = ({ onStartSetup, stats }) => {
                         <ArrowRight size={24} />
                     </div>
 
-                    <motion.div 
+                    <motion.div
                         className="step-card"
                         whileHover={{ scale: 1.02 }}
                     >
@@ -259,7 +243,7 @@ const LandingPage = ({ onStartSetup, stats }) => {
                         <ArrowRight size={24} />
                     </div>
 
-                    <motion.div 
+                    <motion.div
                         className="step-card"
                         whileHover={{ scale: 1.02 }}
                     >
@@ -273,40 +257,7 @@ const LandingPage = ({ onStartSetup, stats }) => {
                 </div>
             </motion.section>
 
-            {/* Testimonials Section */}
-            <motion.section className="testimonials-section" variants={itemVariants}>
-                <div className="section-header">
-                    <span className="section-badge">Testimonials</span>
-                    <h2 className="section-title">Loved by Thousands of Candidates</h2>
-                </div>
 
-                <div className="testimonials-grid">
-                    {testimonials.map((testimonial, index) => (
-                        <motion.div
-                            key={index}
-                            className="testimonial-card"
-                            variants={itemVariants}
-                            whileHover={{ y: -5 }}
-                        >
-                            <div className="testimonial-stars">
-                                {[...Array(5)].map((_, i) => (
-                                    <Star key={i} size={16} fill="#fbbf24" color="#fbbf24" />
-                                ))}
-                            </div>
-                            <p className="testimonial-quote">"{testimonial.quote}"</p>
-                            <div className="testimonial-author">
-                                <div className="author-avatar">
-                                    {testimonial.author.charAt(0)}
-                                </div>
-                                <div className="author-info">
-                                    <span className="author-name">{testimonial.author}</span>
-                                    <span className="author-role">{testimonial.role}</span>
-                                </div>
-                            </div>
-                        </motion.div>
-                    ))}
-                </div>
-            </motion.section>
 
             {/* CTA Section */}
             <motion.section className="final-cta" variants={itemVariants}>
