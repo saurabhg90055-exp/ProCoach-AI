@@ -879,33 +879,20 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
             setAvatarState('speaking');
             if (soundEnabled) soundEffects.play('aiSpeaking');
 
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.rate = 1.0;
-            utterance.pitch = 1.0;
-            utterance.volume = 1.0;
-
-            // Select voice based on interviewer gender
+            // --- Voice selection (shared across all chunks) ---
             const voices = window.speechSynthesis.getVoices();
-
-            // Voice selection logic:
-            // For female: prefer voices with female indicators
-            // For male: prefer voices with male indicators
             const isFemale = interviewerGender === 'female';
 
-            // Common female voice name patterns
             const femalePatterns = ['female', 'woman', 'zira', 'hazel', 'susan', 'samantha', 'karen', 'moira', 'fiona', 'tessa', 'veena', 'aria', 'jenny', 'michelle', 'sonia', 'natasha', 'neerja'];
-            // Common male voice name patterns  
             const malePatterns = ['male', 'man', 'david', 'mark', 'james', 'george', 'daniel', 'guy', 'davis', 'christopher', 'eric', 'ryan'];
 
             let selectedVoice = null;
             const englishVoices = voices.filter(v => v.lang.includes('en'));
 
             if (isFemale) {
-                // Try to find a female voice
                 selectedVoice = englishVoices.find(v =>
                     femalePatterns.some(p => v.name.toLowerCase().includes(p))
                 );
-                // If no female pattern found, try Google/Microsoft voices (often have good quality)
                 if (!selectedVoice) {
                     selectedVoice = englishVoices.find(v =>
                         (v.name.includes('Google') || v.name.includes('Microsoft')) &&
@@ -913,11 +900,9 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                     );
                 }
             } else {
-                // Try to find a male voice
                 selectedVoice = englishVoices.find(v =>
                     malePatterns.some(p => v.name.toLowerCase().includes(p))
                 );
-                // If no male pattern found, try Google/Microsoft voices
                 if (!selectedVoice) {
                     selectedVoice = englishVoices.find(v =>
                         (v.name.includes('Google') || v.name.includes('Microsoft')) &&
@@ -926,30 +911,55 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                 }
             }
 
-            // Fallback to any English voice
             if (!selectedVoice) {
                 selectedVoice = englishVoices[0] || voices[0];
             }
 
             if (selectedVoice) {
-                utterance.voice = selectedVoice;
                 console.log(`[BrowserTTS] Using voice: ${selectedVoice.name} for ${interviewerGender} interviewer`);
             }
 
-            // Chrome bug workaround: Chrome pauses speech synthesis after ~15 seconds
-            // Keep speech alive with periodic resume calls
+            // --- Split text into sentence-level chunks ---
+            // Chrome silently truncates long single utterances (~200-300+ chars).
+            // Speaking each sentence as a separate utterance avoids this.
+            const splitIntoSentences = (txt) => {
+                // Split on sentence-ending punctuation, keeping the delimiter attached
+                const raw = txt.match(/[^.!?]*[.!?]+[\s]*/g);
+                if (raw && raw.length > 0) {
+                    // If there's leftover text after the last punctuation, add it
+                    const joined = raw.join('');
+                    const remainder = txt.slice(joined.length).trim();
+                    const sentences = raw.map(s => s.trim()).filter(s => s.length > 0);
+                    if (remainder.length > 0) {
+                        sentences.push(remainder);
+                    }
+                    return sentences;
+                }
+                // No sentence punctuation found — return the whole text as one chunk
+                return [txt.trim()];
+            };
+
+            const sentences = splitIntoSentences(text);
+            console.log(`[BrowserTTS] Split into ${sentences.length} sentence chunk(s)`);
+
+            // --- Chrome keepalive workaround ---
+            // Chrome pauses speechSynthesis after ~15 seconds of continuous speech.
+            // We pause/resume every 5 seconds to stay ahead of this limit.
             let keepAliveInterval = null;
             const startKeepAlive = () => {
+                if (keepAliveInterval) clearInterval(keepAliveInterval);
                 keepAliveInterval = setInterval(() => {
                     if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
-                        // Keep the synthesis alive
                         window.speechSynthesis.pause();
                         window.speechSynthesis.resume();
                     }
-                }, 10000); // Every 10 seconds
+                }, 5000); // Every 5 seconds (was 10s — too slow for Chrome's ~15s cutoff)
             };
 
+            let finished = false;
             const cleanup = () => {
+                if (finished) return; // prevent double-cleanup
+                finished = true;
                 if (keepAliveInterval) {
                     clearInterval(keepAliveInterval);
                     keepAliveInterval = null;
@@ -958,24 +968,62 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                 setAvatarState('idle');
             };
 
-            utterance.onstart = () => {
-                startKeepAlive();
+            // --- Queue sentences as chained utterances ---
+            let currentIndex = 0;
+
+            const speakNext = () => {
+                if (currentIndex >= sentences.length || finished) {
+                    cleanup();
+                    return;
+                }
+
+                const chunk = sentences[currentIndex];
+                currentIndex++;
+
+                const utterance = new SpeechSynthesisUtterance(chunk);
+                utterance.rate = 1.0;
+                utterance.pitch = 1.0;
+                utterance.volume = 1.0;
+
+                if (selectedVoice) {
+                    utterance.voice = selectedVoice;
+                }
+
+                utterance.onstart = () => {
+                    if (currentIndex === 1) {
+                        // Start keepalive on first chunk
+                        startKeepAlive();
+                    }
+                };
+
+                utterance.onend = () => {
+                    // Speak the next sentence in the queue
+                    speakNext();
+                };
+
+                utterance.onerror = (event) => {
+                    console.warn(`[BrowserTTS] Utterance error on chunk ${currentIndex}:`, event.error);
+                    // Try to continue with next sentence despite error
+                    speakNext();
+                };
+
+                window.speechSynthesis.speak(utterance);
             };
 
-            utterance.onend = cleanup;
-            utterance.onerror = cleanup;
+            // Start speaking the first sentence
+            speakNext();
 
-            // Safety timeout: reset speaking state after a reasonable max duration
-            // Estimate ~150 words per minute, average word is 5 chars
-            const estimatedDuration = Math.max(10000, (text.length / 5) * 400 + 5000);
+            // --- Safety timeout ---
+            // Generous estimate: ~100 words per minute, avg word = 5 chars
+            // This is a last-resort fallback; normal cleanup happens via onend chain.
+            const estimatedDuration = Math.max(15000, (text.length / 5) * 600 + 10000);
             setTimeout(() => {
-                if (window.speechSynthesis.speaking) {
+                if (!finished && window.speechSynthesis.speaking) {
+                    console.warn('[BrowserTTS] Safety timeout reached — cancelling speech');
                     window.speechSynthesis.cancel();
                 }
                 cleanup();
             }, estimatedDuration);
-
-            window.speechSynthesis.speak(utterance);
         } else {
             setIsSpeaking(false);
             setAvatarState('idle');
@@ -1576,8 +1624,8 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                         <div className="score-summary">
                             <div className="score-circle">
                                 <span className="score-value">{summary.scores.average}</span>
-                                <span className="score-label">/10</span>
                             </div>
+                            <p className="score-out-of-label">Score out of 10</p>
                             <div className="score-details">
                                 <p>📊 Questions: {summary.total_questions}</p>
                                 <p>📈 Trend: {summary.scores.trend}</p>
@@ -1821,7 +1869,8 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                 {renderAuthHeader()}
                 {renderAuthModal()}
                 <div className="setup-card">
-                    <h2>🎯 Setup Your ProCoach AI Interview</h2>
+                    <h2>Setup Your Mock Interview</h2>
+
 
                     {/* Progress Steps */}
                     <div className="setup-progress">

@@ -66,11 +66,11 @@ function AppContent() {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, [currentView]);
-  
+
   // Auth context
   const { user, isAuthenticated, isLoading: authLoading, logout, dashboardData, addXP, syncSettings } = useAuth();
   const toast = useToast();
-  
+
   const [settings, setSettings] = useState(() => {
     const saved = localStorage.getItem('appSettings');
     return saved ? JSON.parse(saved) : {
@@ -130,7 +130,7 @@ function AppContent() {
   const handleSettingsChange = async (newSettings) => {
     setSettings(newSettings);
     localStorage.setItem('appSettings', JSON.stringify(newSettings));
-    
+
     // Sync with server if authenticated
     if (isAuthenticated) {
       await syncSettings(newSettings);
@@ -148,15 +148,15 @@ function AppContent() {
         });
       }
     }
-    
+
     // Also record locally for immediate UI feedback
     const xpGained = recordInterview(score, difficulty, questionCount);
-    
+
     // Show XP gain toast
     if (xpGained > 0) {
       toast.success(`+${xpGained} XP earned!`);
     }
-    
+
     // Trigger confetti for good scores
     if (score >= 70) {
       confetti.celebrate();
@@ -166,7 +166,7 @@ function AppContent() {
     } else {
       toast.info(`Keep practicing! Score: ${score.toFixed(0)}%`);
     }
-    
+
     return xpGained;
   }, [recordInterview, confetti, isAuthenticated, addXP, toast]);
 
@@ -179,140 +179,139 @@ function AppContent() {
     <div className="app-container">
       {/* Simple Gradient Background */}
       <div className="app-background" />
-      
+
       {/* AI-Themed Decorative Background Elements */}
-      <div 
+      <div
         className="bg-decorations"
         style={{ filter: `blur(${backgroundBlur}px)` }}
       >
         {/* Left side elements */}
         <div className="deco-element deco-left-1">
           <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="100" cy="100" r="80" fill="url(#grad1)" opacity="0.15"/>
+            <circle cx="100" cy="100" r="80" fill="url(#grad1)" opacity="0.15" />
             <defs>
               <radialGradient id="grad1" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="#6366f1"/>
-                <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0"/>
+                <stop offset="0%" stopColor="#6366f1" />
+                <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" />
               </radialGradient>
             </defs>
           </svg>
         </div>
         <div className="deco-element deco-left-2">
           <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <polygon points="50,5 95,50 50,95 5,50" fill="none" stroke="#6366f1" strokeWidth="1" opacity="0.2"/>
-            <polygon points="50,15 85,50 50,85 15,50" fill="none" stroke="#8b5cf6" strokeWidth="1" opacity="0.15"/>
-            <polygon points="50,25 75,50 50,75 25,50" fill="none" stroke="#a855f7" strokeWidth="1" opacity="0.1"/>
+            <polygon points="50,5 95,50 50,95 5,50" fill="none" stroke="#6366f1" strokeWidth="1" opacity="0.2" />
+            <polygon points="50,15 85,50 50,85 15,50" fill="none" stroke="#8b5cf6" strokeWidth="1" opacity="0.15" />
+            <polygon points="50,25 75,50 50,75 25,50" fill="none" stroke="#a855f7" strokeWidth="1" opacity="0.1" />
           </svg>
         </div>
         <div className="deco-element deco-left-3">
           <svg viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="75" cy="75" r="60" fill="none" stroke="#6366f1" strokeWidth="0.5" opacity="0.2" strokeDasharray="4 4"/>
-            <circle cx="75" cy="75" r="45" fill="none" stroke="#8b5cf6" strokeWidth="0.5" opacity="0.15" strokeDasharray="2 6"/>
-            <circle cx="75" cy="75" r="30" fill="none" stroke="#a855f7" strokeWidth="0.5" opacity="0.1"/>
+            <circle cx="75" cy="75" r="60" fill="none" stroke="#6366f1" strokeWidth="0.5" opacity="0.2" strokeDasharray="4 4" />
+            <circle cx="75" cy="75" r="45" fill="none" stroke="#8b5cf6" strokeWidth="0.5" opacity="0.15" strokeDasharray="2 6" />
+            <circle cx="75" cy="75" r="30" fill="none" stroke="#a855f7" strokeWidth="0.5" opacity="0.1" />
           </svg>
         </div>
-        
+
         {/* Right side elements */}
         <div className="deco-element deco-right-1">
           <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="100" cy="100" r="80" fill="url(#grad2)" opacity="0.12"/>
+            <circle cx="100" cy="100" r="80" fill="url(#grad2)" opacity="0.12" />
             <defs>
               <radialGradient id="grad2" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="#ec4899"/>
-                <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0"/>
+                <stop offset="0%" stopColor="#ec4899" />
+                <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" />
               </radialGradient>
             </defs>
           </svg>
         </div>
         <div className="deco-element deco-right-2">
           <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-            <path d="M60,10 L110,60 L60,110 L10,60 Z" fill="none" stroke="#ec4899" strokeWidth="1" opacity="0.15"/>
-            <circle cx="60" cy="60" r="35" fill="none" stroke="#f472b6" strokeWidth="0.5" opacity="0.2" strokeDasharray="3 3"/>
+            <path d="M60,10 L110,60 L60,110 L10,60 Z" fill="none" stroke="#ec4899" strokeWidth="1" opacity="0.15" />
+            <circle cx="60" cy="60" r="35" fill="none" stroke="#f472b6" strokeWidth="0.5" opacity="0.2" strokeDasharray="3 3" />
           </svg>
         </div>
         <div className="deco-element deco-right-3">
           <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="50" cy="50" r="40" fill="url(#grad3)" opacity="0.1"/>
+            <circle cx="50" cy="50" r="40" fill="url(#grad3)" opacity="0.1" />
             <defs>
               <radialGradient id="grad3" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="#f472b6"/>
-                <stop offset="100%" stopColor="#6366f1" stopOpacity="0"/>
+                <stop offset="0%" stopColor="#f472b6" />
+                <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
               </radialGradient>
             </defs>
           </svg>
         </div>
-        
+
         {/* Floating dots pattern - left */}
         <div className="deco-dots deco-dots-left">
           <svg viewBox="0 0 100 200" xmlns="http://www.w3.org/2000/svg">
             {[...Array(8)].map((_, i) => (
-              <circle 
-                key={i} 
-                cx={20 + (i % 3) * 30} 
-                cy={20 + Math.floor(i / 3) * 50 + (i % 2) * 20} 
-                r={2 + (i % 3)} 
-                fill="#6366f1" 
+              <circle
+                key={i}
+                cx={20 + (i % 3) * 30}
+                cy={20 + Math.floor(i / 3) * 50 + (i % 2) * 20}
+                r={2 + (i % 3)}
+                fill="#6366f1"
                 opacity={0.1 + (i % 3) * 0.05}
               />
             ))}
           </svg>
         </div>
-        
+
         {/* Floating dots pattern - right */}
         <div className="deco-dots deco-dots-right">
           <svg viewBox="0 0 100 200" xmlns="http://www.w3.org/2000/svg">
             {[...Array(8)].map((_, i) => (
-              <circle 
-                key={i} 
-                cx={20 + (i % 3) * 30} 
-                cy={20 + Math.floor(i / 3) * 50 + (i % 2) * 20} 
-                r={2 + (i % 3)} 
-                fill="#ec4899" 
+              <circle
+                key={i}
+                cx={20 + (i % 3) * 30}
+                cy={20 + Math.floor(i / 3) * 50 + (i % 2) * 20}
+                r={2 + (i % 3)}
+                fill="#ec4899"
                 opacity={0.1 + (i % 3) * 0.05}
               />
             ))}
           </svg>
         </div>
-        
+
         {/* Neural network lines - left */}
         <div className="deco-neural deco-neural-left">
           <svg viewBox="0 0 150 300" xmlns="http://www.w3.org/2000/svg">
-            <line x1="20" y1="50" x2="80" y2="100" stroke="#6366f1" strokeWidth="0.5" opacity="0.15"/>
-            <line x1="80" y1="100" x2="40" y2="160" stroke="#8b5cf6" strokeWidth="0.5" opacity="0.12"/>
-            <line x1="40" y1="160" x2="100" y2="200" stroke="#6366f1" strokeWidth="0.5" opacity="0.1"/>
-            <line x1="100" y1="200" x2="60" y2="260" stroke="#a855f7" strokeWidth="0.5" opacity="0.08"/>
-            <circle cx="20" cy="50" r="4" fill="#6366f1" opacity="0.2"/>
-            <circle cx="80" cy="100" r="3" fill="#8b5cf6" opacity="0.15"/>
-            <circle cx="40" cy="160" r="4" fill="#6366f1" opacity="0.12"/>
-            <circle cx="100" cy="200" r="3" fill="#a855f7" opacity="0.1"/>
-            <circle cx="60" cy="260" r="4" fill="#8b5cf6" opacity="0.08"/>
+            <line x1="20" y1="50" x2="80" y2="100" stroke="#6366f1" strokeWidth="0.5" opacity="0.15" />
+            <line x1="80" y1="100" x2="40" y2="160" stroke="#8b5cf6" strokeWidth="0.5" opacity="0.12" />
+            <line x1="40" y1="160" x2="100" y2="200" stroke="#6366f1" strokeWidth="0.5" opacity="0.1" />
+            <line x1="100" y1="200" x2="60" y2="260" stroke="#a855f7" strokeWidth="0.5" opacity="0.08" />
+            <circle cx="20" cy="50" r="4" fill="#6366f1" opacity="0.2" />
+            <circle cx="80" cy="100" r="3" fill="#8b5cf6" opacity="0.15" />
+            <circle cx="40" cy="160" r="4" fill="#6366f1" opacity="0.12" />
+            <circle cx="100" cy="200" r="3" fill="#a855f7" opacity="0.1" />
+            <circle cx="60" cy="260" r="4" fill="#8b5cf6" opacity="0.08" />
           </svg>
         </div>
-        
+
         {/* Neural network lines - right */}
         <div className="deco-neural deco-neural-right">
           <svg viewBox="0 0 150 300" xmlns="http://www.w3.org/2000/svg">
-            <line x1="130" y1="40" x2="70" y2="90" stroke="#ec4899" strokeWidth="0.5" opacity="0.15"/>
-            <line x1="70" y1="90" x2="110" y2="150" stroke="#f472b6" strokeWidth="0.5" opacity="0.12"/>
-            <line x1="110" y1="150" x2="50" y2="210" stroke="#ec4899" strokeWidth="0.5" opacity="0.1"/>
-            <line x1="50" y1="210" x2="90" y2="270" stroke="#f472b6" strokeWidth="0.5" opacity="0.08"/>
-            <circle cx="130" cy="40" r="4" fill="#ec4899" opacity="0.2"/>
-            <circle cx="70" cy="90" r="3" fill="#f472b6" opacity="0.15"/>
-            <circle cx="110" cy="150" r="4" fill="#ec4899" opacity="0.12"/>
-            <circle cx="50" cy="210" r="3" fill="#f472b6" opacity="0.1"/>
-            <circle cx="90" cy="270" r="4" fill="#ec4899" opacity="0.08"/>
+            <line x1="130" y1="40" x2="70" y2="90" stroke="#ec4899" strokeWidth="0.5" opacity="0.15" />
+            <line x1="70" y1="90" x2="110" y2="150" stroke="#f472b6" strokeWidth="0.5" opacity="0.12" />
+            <line x1="110" y1="150" x2="50" y2="210" stroke="#ec4899" strokeWidth="0.5" opacity="0.1" />
+            <line x1="50" y1="210" x2="90" y2="270" stroke="#f472b6" strokeWidth="0.5" opacity="0.08" />
+            <circle cx="130" cy="40" r="4" fill="#ec4899" opacity="0.2" />
+            <circle cx="70" cy="90" r="3" fill="#f472b6" opacity="0.15" />
+            <circle cx="110" cy="150" r="4" fill="#ec4899" opacity="0.12" />
+            <circle cx="50" cy="210" r="3" fill="#f472b6" opacity="0.1" />
+            <circle cx="90" cy="270" r="4" fill="#ec4899" opacity="0.08" />
           </svg>
         </div>
       </div>
 
       {/* Navigation Header */}
       <header className="app-header">
-        <motion.div 
+        <motion.div
           className="logo-section"
           whileHover={{ scale: 1.02 }}
           onClick={() => setCurrentView('landing')}
         >
-          <Star className="logo-icon" />
           <span className="logo-text">ProCoach AI</span>
         </motion.div>
 
@@ -352,8 +351,8 @@ function AppContent() {
           <div className="mini-level">
             <span className="level-badge">Lvl {displayLevelInfo.level}</span>
             <div className="mini-progress">
-              <div 
-                className="mini-progress-fill" 
+              <div
+                className="mini-progress-fill"
                 style={{ width: `${displayLevelInfo.progress}%` }}
               />
             </div>
@@ -407,7 +406,7 @@ function AppContent() {
               exit={{ opacity: 0, y: -20 }}
               className="landing-view"
             >
-              <LandingPage 
+              <LandingPage
                 onStartSetup={() => setCurrentView('home')}
                 stats={displayStats}
               />
@@ -422,17 +421,8 @@ function AppContent() {
               exit={{ opacity: 0, y: -20 }}
               className="home-view"
             >
-              <div className="welcome-section">
-                <h1 className="main-title">
-                  <span className="gradient-text">Setup Your</span>
-                  <br />
-                  <span className="highlight-text">Mock Interview</span>
-                </h1>
-                <p className="main-subtitle">
-                  Configure your interview session and start practicing with ProCoach AI
-                </p>
-              </div>
-              <AudioRecorder 
+              <AudioRecorder
+
                 settings={settings}
                 onInterviewComplete={handleInterviewComplete}
                 onRequireAuth={() => openAuthModal('login')}
@@ -486,8 +476,8 @@ function AppContent() {
       {/* Achievement Unlock */}
       <AnimatePresence>
         {newAchievement && settings.achievementAlerts && (
-          <AchievementUnlock 
-            achievement={newAchievement} 
+          <AchievementUnlock
+            achievement={newAchievement}
             onClose={clearNewAchievement}
           />
         )}
