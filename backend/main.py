@@ -152,6 +152,30 @@ async def remove_session(session_id: str):
         print(f"Warning: Could not remove session from MongoDB: {e}")
 
 
+def ensure_complete_sentences(text: str) -> str:
+    """Trim LLM output to the last complete sentence.
+    
+    LLM responses may be cut off mid-sentence when they hit the
+    max_tokens limit.  This function drops any trailing incomplete
+    sentence so the browser TTS speaks only full sentences.
+    """
+    if not text:
+        return text
+    text = text.strip()
+    # Already ends with sentence-ending punctuation — nothing to trim
+    if text and text[-1] in '.!?':
+        return text
+    # Find the last sentence-ending punctuation
+    last_period = text.rfind('.')
+    last_excl   = text.rfind('!')
+    last_quest  = text.rfind('?')
+    last_end = max(last_period, last_excl, last_quest)
+    if last_end > 0:
+        return text[:last_end + 1].strip()
+    # No sentence boundary found — return the whole text as-is
+    return text
+
+
 # Language code mapping for Whisper and TTS
 LANGUAGE_CODES = {
     'en-US': 'en', 'en-GB': 'en', 'en-IN': 'en',
@@ -1038,7 +1062,7 @@ async def analyze_audio(
             model="llama-3.3-70b-versatile",
             messages=messages,
             temperature=0.7,
-            max_tokens=200
+            max_tokens=300
         )
         ai_response = completion.choices[0].message.content
         print(f"AI said: {ai_response}")
@@ -1050,8 +1074,9 @@ async def analyze_audio(
             score = int(score_match.group(1))
             session["scores"].append(score)
             display_response = re.sub(r'\s*\[SCORE:\s*\d+/10\]', '', ai_response).strip()
+            display_response = ensure_complete_sentences(display_response)
         else:
-            display_response = ai_response
+            display_response = ensure_complete_sentences(ai_response)
         
         # Calculate running average
         avg_score = sum(session["scores"]) / len(session["scores"]) if session["scores"] else None
@@ -1401,8 +1426,9 @@ IMPORTANT: Naturally incorporate body language feedback when appropriate:
             score = float(score_match.group(1))
             session["scores"].append(score)
             ai_response_clean = re.sub(r'\s*\[SCORE:\s*\d+(?:\.\d+)?/10\]', '', ai_response)
+            ai_response_clean = ensure_complete_sentences(ai_response_clean)
         else:
-            ai_response_clean = ai_response
+            ai_response_clean = ensure_complete_sentences(ai_response)
         
         # Update session history (don't add expression to history - causes API error)
         session["history"].append({"role": "user", "content": user_response})
