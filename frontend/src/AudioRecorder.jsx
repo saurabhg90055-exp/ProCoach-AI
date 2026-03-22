@@ -132,6 +132,45 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
     const recordingTimerRef = useRef(null);
     const audioContextRef = useRef(null);
     const analyserRef = useRef(null);
+    const audioUnlockedRef = useRef(false);
+
+    // Unlock audio on mobile - must be called from user interaction (click/tap)
+    const unlockAudio = useCallback(() => {
+        if (audioUnlockedRef.current) return Promise.resolve();
+
+        return new Promise((resolve) => {
+            // Create a silent audio context to unlock audio playback
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (AudioContext) {
+                const ctx = new AudioContext();
+                // Create a short silent buffer
+                const buffer = ctx.createBuffer(1, 1, 22050);
+                const source = ctx.createBufferSource();
+                source.buffer = buffer;
+                source.connect(ctx.destination);
+                source.start(0);
+
+                // Also create and play a silent HTML5 audio
+                const silentAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
+                silentAudio.play().then(() => {
+                    audioUnlockedRef.current = true;
+                    console.log('[Audio] Mobile audio unlocked successfully');
+                    resolve();
+                }).catch(() => {
+                    // Even if silent audio fails, mark as attempted
+                    audioUnlockedRef.current = true;
+                    resolve();
+                });
+
+                ctx.resume().then(() => {
+                    console.log('[Audio] AudioContext resumed');
+                });
+            } else {
+                audioUnlockedRef.current = true;
+                resolve();
+            }
+        });
+    }, []);
 
     // Update sound enabled when settings change
     useEffect(() => {
@@ -906,20 +945,29 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
         if (soundEnabled) soundEffects.play('aiSpeaking');
 
         try {
+            // Add timeout for mobile networks
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
             const response = await fetch(`${API_URL}/tts`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     text,
                     interviewer_gender: interviewerGender
-                })
+                }),
+                signal: controller.signal
             });
+
+            clearTimeout(timeoutId);
 
             if (!response.ok) {
                 throw new Error(`Server TTS failed: ${response.status}`);
             }
 
             const blob = await response.blob();
+            console.log('[TTS] Received audio blob:', blob.size, 'bytes, type:', blob.type);
+
             const audioUrl = URL.createObjectURL(blob);
 
             // Create new Audio element for each playback to avoid mobile issues
@@ -930,9 +978,15 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
             ttsAudioRef.current = audio;
 
             return new Promise((resolve, reject) => {
-                audio.oncanplaythrough = () => {
+                let playAttempted = false;
+
+                const attemptPlay = () => {
+                    if (playAttempted) return;
+                    playAttempted = true;
+
                     audio.play()
                         .then(() => {
+                            console.log('[TTS] Audio playback started');
                             setTtsVoiceInfo({
                                 engine: 'cloud',
                                 matched: true,
@@ -950,7 +1004,11 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                         });
                 };
 
+                audio.oncanplaythrough = attemptPlay;
+                audio.onloadeddata = attemptPlay; // Fallback for some mobile browsers
+
                 audio.onended = () => {
+                    console.log('[TTS] Audio playback ended');
                     if (requestId === ttsRequestIdRef.current) {
                         setIsSpeaking(false);
                         setAvatarState('idle');
@@ -960,17 +1018,25 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                 };
 
                 audio.onerror = (e) => {
-                    console.error('[TTS] Audio error:', e);
+                    console.error('[TTS] Audio error:', e, audio.error);
                     if (requestId === ttsRequestIdRef.current) {
                         setIsSpeaking(false);
                         setAvatarState('idle');
                     }
                     URL.revokeObjectURL(audioUrl);
-                    reject(new Error('Audio playback error'));
+                    reject(new Error('Audio playback error: ' + (audio.error?.message || 'unknown')));
                 };
 
                 audio.src = audioUrl;
                 audio.load();
+
+                // Safety timeout in case events don't fire
+                setTimeout(() => {
+                    if (!playAttempted) {
+                        console.log('[TTS] Safety timeout - attempting play');
+                        attemptPlay();
+                    }
+                }, 1000);
             });
         } catch (error) {
             console.error('[TTS] Server TTS error:', error);
@@ -1004,11 +1070,16 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                 await speakWithServerTTS(text, requestId);
             } catch (serverError) {
                 console.error('[TTS] Server TTS failed on mobile:', serverError);
+                showNotification('Cloud voice unavailable. Trying device voice...', 'warning', 2500);
                 // Fallback to browser TTS if server fails
                 try {
-                    await speakWithBrowserTTS(text, requestId);
+                    const browserResult = await speakWithBrowserTTS(text, requestId);
+                    if (!browserResult.ok) {
+                        showNotification('Voice playback unavailable on this device.', 'error', 4000);
+                    }
                 } catch (browserError) {
                     console.error('[TTS] Browser TTS fallback also failed:', browserError);
+                    showNotification('Voice playback failed. Please read the questions on screen.', 'error', 4000);
                     setIsSpeaking(false);
                     setAvatarState('idle');
                 }
@@ -1182,6 +1253,9 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
     };
 
     const startInterview = async () => {
+        // Unlock audio on mobile (must happen on user interaction)
+        await unlockAudio();
+
         setIsProcessing(true);
         setAvatarState('thinking');
 

@@ -690,14 +690,14 @@ async def text_to_speech(request: TextToSpeechRequest):
             model="playht-tts",
             voice=preferred_voice,
             input=request.text,
-            response_format="wav"
+            response_format="mp3"  # MP3 for better mobile browser compatibility
         )
-        
+
         audio_bytes = response.read()
         return StreamingResponse(
             io.BytesIO(audio_bytes),
-            media_type="audio/wav",
-            headers={"Content-Disposition": "inline; filename=speech.wav"}
+            media_type="audio/mpeg",
+            headers={"Content-Disposition": "inline; filename=speech.mp3"}
         )
     except Exception as e:
         print(f"TTS Error: {e}")
@@ -706,13 +706,13 @@ async def text_to_speech(request: TextToSpeechRequest):
                 model="playht-tts",
                 voice=fallback_voice,
                 input=request.text,
-                response_format="wav"
+                response_format="mp3"
             )
             audio_bytes = response.read()
             return StreamingResponse(
                 io.BytesIO(audio_bytes),
-                media_type="audio/wav",
-                headers={"Content-Disposition": "inline; filename=speech.wav"}
+                media_type="audio/mpeg",
+                headers={"Content-Disposition": "inline; filename=speech.mp3"}
             )
         except Exception as fallback_error:
             raise HTTPException(status_code=500, detail=f"TTS failed: {str(fallback_error)}")
