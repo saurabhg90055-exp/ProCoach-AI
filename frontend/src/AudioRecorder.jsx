@@ -905,44 +905,79 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
         setAvatarState('speaking');
         if (soundEnabled) soundEffects.play('aiSpeaking');
 
-        const response = await fetch(`${API_URL}/tts`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                text,
-                interviewer_gender: interviewerGender
-            })
-        });
+        try {
+            const response = await fetch(`${API_URL}/tts`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    text,
+                    interviewer_gender: interviewerGender
+                })
+            });
 
-        if (!response.ok) {
-            throw new Error(`Server TTS failed: ${response.status}`);
+            if (!response.ok) {
+                throw new Error(`Server TTS failed: ${response.status}`);
+            }
+
+            const blob = await response.blob();
+            const audioUrl = URL.createObjectURL(blob);
+
+            // Create new Audio element for each playback to avoid mobile issues
+            const audio = new Audio();
+            audio.preload = 'auto';
+
+            // Store reference for cleanup
+            ttsAudioRef.current = audio;
+
+            return new Promise((resolve, reject) => {
+                audio.oncanplaythrough = () => {
+                    audio.play()
+                        .then(() => {
+                            setTtsVoiceInfo({
+                                engine: 'cloud',
+                                matched: true,
+                                voiceName: interviewerGender === 'female' ? 'Ariana-PlayHT' : 'Fritz-PlayHT'
+                            });
+                        })
+                        .catch(err => {
+                            console.error('[TTS] Audio play failed:', err);
+                            URL.revokeObjectURL(audioUrl);
+                            if (requestId === ttsRequestIdRef.current) {
+                                setIsSpeaking(false);
+                                setAvatarState('idle');
+                            }
+                            reject(err);
+                        });
+                };
+
+                audio.onended = () => {
+                    if (requestId === ttsRequestIdRef.current) {
+                        setIsSpeaking(false);
+                        setAvatarState('idle');
+                    }
+                    URL.revokeObjectURL(audioUrl);
+                    resolve();
+                };
+
+                audio.onerror = (e) => {
+                    console.error('[TTS] Audio error:', e);
+                    if (requestId === ttsRequestIdRef.current) {
+                        setIsSpeaking(false);
+                        setAvatarState('idle');
+                    }
+                    URL.revokeObjectURL(audioUrl);
+                    reject(new Error('Audio playback error'));
+                };
+
+                audio.src = audioUrl;
+                audio.load();
+            });
+        } catch (error) {
+            console.error('[TTS] Server TTS error:', error);
+            setIsSpeaking(false);
+            setAvatarState('idle');
+            throw error;
         }
-
-        const blob = await response.blob();
-        const audioUrl = URL.createObjectURL(blob);
-        const audio = ttsAudioRef.current || new Audio();
-        audio.src = audioUrl;
-        audio.onended = () => {
-            if (requestId === ttsRequestIdRef.current) {
-                setIsSpeaking(false);
-                setAvatarState('idle');
-            }
-            URL.revokeObjectURL(audioUrl);
-        };
-        audio.onerror = () => {
-            if (requestId === ttsRequestIdRef.current) {
-                setIsSpeaking(false);
-                setAvatarState('idle');
-            }
-            URL.revokeObjectURL(audioUrl);
-        };
-
-        await audio.play();
-        setTtsVoiceInfo({
-            engine: 'cloud',
-            matched: true,
-            voiceName: interviewerGender === 'female' ? 'Ariana-PlayHT' : 'Fritz-PlayHT'
-        });
     };
 
     // Fetch TTS and play - hybrid mode for reliability
@@ -963,6 +998,25 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
         }
         window.speechSynthesis?.cancel();
 
+        // On mobile, use server TTS directly for reliability and consistent voice gender
+        if (isMobileBrowser()) {
+            try {
+                await speakWithServerTTS(text, requestId);
+            } catch (serverError) {
+                console.error('[TTS] Server TTS failed on mobile:', serverError);
+                // Fallback to browser TTS if server fails
+                try {
+                    await speakWithBrowserTTS(text, requestId);
+                } catch (browserError) {
+                    console.error('[TTS] Browser TTS fallback also failed:', browserError);
+                    setIsSpeaking(false);
+                    setAvatarState('idle');
+                }
+            }
+            return;
+        }
+
+        // On desktop, try browser TTS first, fallback to server
         try {
             const browserResult = await speakWithBrowserTTS(text, requestId);
             if (!browserResult.ok) {
@@ -2163,8 +2217,9 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                                 {enableTTS && (
                                     <div className="form-group">
                                         <p className="form-hint">
-                                            💡 Voice uses your browser's built-in text-to-speech.
-                                            {' '}Current mode: {getTTSStatusText() || 'Detecting...'}.
+                                            {isMobileBrowser()
+                                                ? '☁️ Using cloud voice for reliable playback on mobile.'
+                                                : '📱 Using your device\'s built-in voice.'}
                                         </p>
                                     </div>
                                 )}

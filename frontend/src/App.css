@@ -1598,6 +1598,37 @@ button svg,
   color: white;
 }
 
+/* Voice Type Buttons */
+.voice-type-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.voice-type-btn {
+  flex: 1;
+  min-width: 120px;
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #a0aec0;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.voice-type-btn:hover {
+  border-color: rgba(102, 126, 234, 0.5);
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.voice-type-btn.active {
+  border-color: #667eea;
+  background: linear-gradient(90deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
+  color: white;
+}
+
 /* Voice Select */
 .voice-select {
   width: 100%;
@@ -4604,6 +4635,24 @@ input[type="file"].file-input::file-selector-button {
 }
 
 [data-theme="light"] .engine-btn.active {
+  border-color: #4f46e5;
+  background: linear-gradient(90deg, rgba(79, 70, 229, 0.15), rgba(124, 58, 237, 0.15));
+  color: #1a1a2e;
+}
+
+/* Voice Type Buttons Light Theme */
+[data-theme="light"] .voice-type-btn {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #374151;
+}
+
+[data-theme="light"] .voice-type-btn:hover {
+  border-color: rgba(79, 70, 229, 0.4);
+  background: rgba(79, 70, 229, 0.05);
+}
+
+[data-theme="light"] .voice-type-btn.active {
   border-color: #4f46e5;
   background: linear-gradient(90deg, rgba(79, 70, 229, 0.15), rgba(124, 58, 237, 0.15));
   color: #1a1a2e;
