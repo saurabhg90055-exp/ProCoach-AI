@@ -35,7 +35,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
     const [interviewMode, setInterviewMode] = useState("audio"); // 'audio' | 'video'
     const [interviewerGender, setInterviewerGender] = useState("male"); // 'male' | 'female'
     const [enableTTS, setEnableTTS] = useState(true);
-    // Browser TTS is now the only option (Edge TTS blocked on cloud servers)
+    const [ttsVoiceInfo, setTtsVoiceInfo] = useState({ engine: 'browser', matched: true, voiceName: '' });
     const [topics, setTopics] = useState([]);
     const [companies, setCompanies] = useState([]);
     const [difficulties, setDifficulties] = useState([]);
@@ -127,6 +127,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
     const chunksRef = useRef([]);
     const chatEndRef = useRef(null);
     const ttsAudioRef = useRef(null);
+    const ttsRequestIdRef = useRef(0);
     const timerIntervalRef = useRef(null);
     const recordingTimerRef = useRef(null);
     const audioContextRef = useRef(null);
@@ -332,6 +333,14 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    const getTTSStatusText = () => {
+        if (!enableTTS) return '';
+        if (ttsVoiceInfo.engine === 'cloud') {
+            return interviewerGender === 'female' ? 'Cloud voice (female)' : 'Cloud voice (male)';
+        }
+        return ttsVoiceInfo.matched ? 'Browser voice (matched)' : 'Browser voice (fallback)';
     };
 
     // Phase 4: Fetch detailed analytics
@@ -793,6 +802,71 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
         }
     };
 
+    const isIOSLike = () => {
+        const ua = navigator.userAgent || '';
+        return /iPad|iPhone|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    };
+
+    const isMobileBrowser = () => /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+
+    const chooseVoiceForGender = (voices, gender) => {
+        const femalePatterns = ['female', 'woman', 'zira', 'hazel', 'susan', 'samantha', 'karen', 'moira', 'fiona', 'tessa', 'veena', 'aria', 'jenny', 'michelle', 'sonia', 'natasha', 'neerja'];
+        const malePatterns = ['male', 'man', 'david', 'mark', 'james', 'george', 'daniel', 'guy', 'davis', 'christopher', 'eric', 'ryan', 'alex'];
+        const targetPatterns = gender === 'female' ? femalePatterns : malePatterns;
+        const oppositePatterns = gender === 'female' ? malePatterns : femalePatterns;
+
+        const englishVoices = voices.filter(v => (v.lang || '').toLowerCase().startsWith('en'));
+        const pool = englishVoices.length > 0 ? englishVoices : voices;
+
+        const scored = pool.map((voice) => {
+            const name = (voice.name || '').toLowerCase();
+            let score = 0;
+            if ((voice.lang || '').toLowerCase() === 'en-us') score += 20;
+            if ((voice.lang || '').toLowerCase().startsWith('en')) score += 10;
+            if (voice.localService) score += 5;
+            if (targetPatterns.some(p => name.includes(p))) score += 40;
+            if (oppositePatterns.some(p => name.includes(p))) score -= 20;
+            if (name.includes('google') || name.includes('microsoft')) score += 6;
+            return { voice, score, matched: targetPatterns.some(p => name.includes(p)) };
+        }).sort((a, b) => b.score - a.score);
+
+        const best = scored[0] || null;
+        return {
+            selectedVoice: best?.voice || null,
+            matchedRequestedGender: Boolean(best?.matched)
+        };
+    };
+
+    const splitTextForTTS = (txt, maxChunkLength = 150) => {
+        const sentenceGroups = txt.match(/[^.!?]*[.!?]+[\s]*/g) || [txt];
+        const joined = sentenceGroups.join('');
+        const remainder = txt.slice(joined.length).trim();
+        const seeds = sentenceGroups.map(s => s.trim()).filter(Boolean);
+        if (remainder) seeds.push(remainder);
+
+        const chunks = [];
+        for (const sentence of seeds) {
+            if (sentence.length <= maxChunkLength) {
+                chunks.push(sentence);
+                continue;
+            }
+
+            const words = sentence.split(/\s+/);
+            let current = '';
+            for (const word of words) {
+                const next = current ? `${current} ${word}` : word;
+                if (next.length <= maxChunkLength) {
+                    current = next;
+                } else {
+                    if (current) chunks.push(current);
+                    current = word;
+                }
+            }
+            if (current) chunks.push(current);
+        }
+        return chunks.length > 0 ? chunks : [txt.trim()];
+    };
+
     // Prefetch TTS audio - no longer needed with browser TTS (returns null)
     const prefetchTTS = async (text) => {
         // Browser TTS doesn't support prefetching - returns null
@@ -826,22 +900,94 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
         });
     };
 
-    // Fetch TTS and play - now always uses browser TTS
+    const speakWithServerTTS = async (text, requestId) => {
+        setIsSpeaking(true);
+        setAvatarState('speaking');
+        if (soundEnabled) soundEffects.play('aiSpeaking');
+
+        const response = await fetch(`${API_URL}/tts`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                text,
+                interviewer_gender: interviewerGender
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Server TTS failed: ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const audioUrl = URL.createObjectURL(blob);
+        const audio = ttsAudioRef.current || new Audio();
+        audio.src = audioUrl;
+        audio.onended = () => {
+            if (requestId === ttsRequestIdRef.current) {
+                setIsSpeaking(false);
+                setAvatarState('idle');
+            }
+            URL.revokeObjectURL(audioUrl);
+        };
+        audio.onerror = () => {
+            if (requestId === ttsRequestIdRef.current) {
+                setIsSpeaking(false);
+                setAvatarState('idle');
+            }
+            URL.revokeObjectURL(audioUrl);
+        };
+
+        await audio.play();
+        setTtsVoiceInfo({
+            engine: 'cloud',
+            matched: true,
+            voiceName: interviewerGender === 'female' ? 'Ariana-PlayHT' : 'Fritz-PlayHT'
+        });
+    };
+
+    // Fetch TTS and play - hybrid mode for reliability
     const fetchAndPlayTTS = async (text) => {
         if (!enableTTS || !text) return;
 
-        console.log('[TTS] Starting browser TTS for text length:', text.length);
-        speakWithBrowserTTS(text);
+        await speakText(text);
         return true;
     };
 
     const speakText = async (text) => {
         if (!enableTTS) return;
 
-        console.log('[speakText] Starting browser TTS, text length:', text.length);
+        const requestId = ++ttsRequestIdRef.current;
+        if (ttsAudioRef.current) {
+            ttsAudioRef.current.pause();
+            ttsAudioRef.current.currentTime = 0;
+        }
+        window.speechSynthesis?.cancel();
 
-        // Use Web Speech API (browser built-in TTS - free & reliable)
-        speakWithBrowserTTS(text);
+        try {
+            const browserResult = await speakWithBrowserTTS(text, requestId);
+            if (!browserResult.ok) {
+                try {
+                    await speakWithServerTTS(text, requestId);
+                    if (browserResult.reason === 'voice-fallback') {
+                        showNotification('Using cloud voice for interviewer clarity on this device.', 'info', 3500);
+                    }
+                } catch (serverError) {
+                    console.error('[TTS] Server fallback failed:', serverError);
+                    setIsSpeaking(false);
+                    setAvatarState('idle');
+                }
+            }
+        } catch (error) {
+            console.warn('[TTS] Browser path failed, using server fallback:', error?.message || error);
+            try {
+                await speakWithServerTTS(text, requestId);
+                showNotification('Switched to cloud voice for stable playback.', 'info', 3500);
+            } catch (serverError) {
+                console.error('[TTS] Server fallback failed:', serverError);
+                setIsSpeaking(false);
+                setAvatarState('idle');
+            }
+        }
     };
 
     // Helper function to play audio blob
@@ -869,165 +1015,116 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
         });
     };
 
-    const speakWithBrowserTTS = (text) => {
-        if ('speechSynthesis' in window) {
-            // Cancel any ongoing speech
-            window.speechSynthesis.cancel();
+    const speakWithBrowserTTS = (text, requestId) => {
+        return new Promise((resolve, reject) => {
+            if (!('speechSynthesis' in window)) {
+                resolve({ ok: false, reason: 'unsupported' });
+                return;
+            }
 
-            // Set speaking state
+            const voices = window.speechSynthesis.getVoices();
+            const { selectedVoice, matchedRequestedGender } = chooseVoiceForGender(voices, interviewerGender);
+
+            const shouldPreferServer = isMobileBrowser() && !matchedRequestedGender;
+            if (shouldPreferServer) {
+                resolve({ ok: false, reason: 'voice-fallback' });
+                return;
+            }
+
+            window.speechSynthesis.cancel();
             setIsSpeaking(true);
             setAvatarState('speaking');
             if (soundEnabled) soundEffects.play('aiSpeaking');
+            setTtsVoiceInfo({
+                engine: 'browser',
+                matched: matchedRequestedGender,
+                voiceName: selectedVoice?.name || ''
+            });
 
-            // --- Voice selection (shared across all chunks) ---
-            const voices = window.speechSynthesis.getVoices();
-            const isFemale = interviewerGender === 'female';
+            const chunks = splitTextForTTS(text, isMobileBrowser() ? 130 : 160);
+            const disableKeepAlive = isIOSLike();
+            let keepAliveInterval = null;
+            let currentIndex = 0;
+            let finished = false;
+            let retryCount = 0;
+            let safetyTimeout = null;
 
-            const femalePatterns = ['female', 'woman', 'zira', 'hazel', 'susan', 'samantha', 'karen', 'moira', 'fiona', 'tessa', 'veena', 'aria', 'jenny', 'michelle', 'sonia', 'natasha', 'neerja'];
-            const malePatterns = ['male', 'man', 'david', 'mark', 'james', 'george', 'daniel', 'guy', 'davis', 'christopher', 'eric', 'ryan'];
-
-            let selectedVoice = null;
-            const englishVoices = voices.filter(v => v.lang.includes('en'));
-
-            if (isFemale) {
-                selectedVoice = englishVoices.find(v =>
-                    femalePatterns.some(p => v.name.toLowerCase().includes(p))
-                );
-                if (!selectedVoice) {
-                    selectedVoice = englishVoices.find(v =>
-                        (v.name.includes('Google') || v.name.includes('Microsoft')) &&
-                        !malePatterns.some(p => v.name.toLowerCase().includes(p))
-                    );
+            const cleanup = () => {
+                if (finished) return;
+                finished = true;
+                if (keepAliveInterval) clearInterval(keepAliveInterval);
+                if (safetyTimeout) clearTimeout(safetyTimeout);
+                if (requestId === ttsRequestIdRef.current) {
+                    setIsSpeaking(false);
+                    setAvatarState('idle');
                 }
-            } else {
-                selectedVoice = englishVoices.find(v =>
-                    malePatterns.some(p => v.name.toLowerCase().includes(p))
-                );
-                if (!selectedVoice) {
-                    selectedVoice = englishVoices.find(v =>
-                        (v.name.includes('Google') || v.name.includes('Microsoft')) &&
-                        !femalePatterns.some(p => v.name.toLowerCase().includes(p))
-                    );
-                }
-            }
-
-            if (!selectedVoice) {
-                selectedVoice = englishVoices[0] || voices[0];
-            }
-
-            if (selectedVoice) {
-                console.log(`[BrowserTTS] Using voice: ${selectedVoice.name} for ${interviewerGender} interviewer`);
-            }
-
-            // --- Split text into sentence-level chunks ---
-            // Chrome silently truncates long single utterances (~200-300+ chars).
-            // Speaking each sentence as a separate utterance avoids this.
-            const splitIntoSentences = (txt) => {
-                // Split on sentence-ending punctuation, keeping the delimiter attached
-                const raw = txt.match(/[^.!?]*[.!?]+[\s]*/g);
-                if (raw && raw.length > 0) {
-                    // If there's leftover text after the last punctuation, add it
-                    const joined = raw.join('');
-                    const remainder = txt.slice(joined.length).trim();
-                    const sentences = raw.map(s => s.trim()).filter(s => s.length > 0);
-                    if (remainder.length > 0) {
-                        sentences.push(remainder);
-                    }
-                    return sentences;
-                }
-                // No sentence punctuation found — return the whole text as one chunk
-                return [txt.trim()];
             };
 
-            const sentences = splitIntoSentences(text);
-            console.log(`[BrowserTTS] Split into ${sentences.length} sentence chunk(s)`);
-
-            // --- Chrome keepalive workaround ---
-            // Chrome pauses speechSynthesis after ~15 seconds of continuous speech.
-            // We pause/resume every 5 seconds to stay ahead of this limit.
-            let keepAliveInterval = null;
             const startKeepAlive = () => {
+                if (disableKeepAlive) return;
                 if (keepAliveInterval) clearInterval(keepAliveInterval);
                 keepAliveInterval = setInterval(() => {
                     if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
                         window.speechSynthesis.pause();
                         window.speechSynthesis.resume();
                     }
-                }, 5000); // Every 5 seconds (was 10s — too slow for Chrome's ~15s cutoff)
+                }, 5000);
             };
-
-            let finished = false;
-            const cleanup = () => {
-                if (finished) return; // prevent double-cleanup
-                finished = true;
-                if (keepAliveInterval) {
-                    clearInterval(keepAliveInterval);
-                    keepAliveInterval = null;
-                }
-                setIsSpeaking(false);
-                setAvatarState('idle');
-            };
-
-            // --- Queue sentences as chained utterances ---
-            let currentIndex = 0;
 
             const speakNext = () => {
-                if (currentIndex >= sentences.length || finished) {
+                if (finished || requestId !== ttsRequestIdRef.current) {
                     cleanup();
+                    resolve({ ok: true });
                     return;
                 }
 
-                const chunk = sentences[currentIndex];
-                currentIndex++;
+                if (currentIndex >= chunks.length) {
+                    cleanup();
+                    resolve({ ok: true });
+                    return;
+                }
 
-                const utterance = new SpeechSynthesisUtterance(chunk);
+                const utterance = new SpeechSynthesisUtterance(chunks[currentIndex]);
                 utterance.rate = 1.0;
                 utterance.pitch = 1.0;
                 utterance.volume = 1.0;
-
-                if (selectedVoice) {
-                    utterance.voice = selectedVoice;
-                }
+                if (selectedVoice) utterance.voice = selectedVoice;
 
                 utterance.onstart = () => {
-                    if (currentIndex === 1) {
-                        // Start keepalive on first chunk
-                        startKeepAlive();
-                    }
+                    if (currentIndex === 0) startKeepAlive();
                 };
 
                 utterance.onend = () => {
-                    // Speak the next sentence in the queue
-                    speakNext();
+                    retryCount = 0;
+                    currentIndex += 1;
+                    setTimeout(speakNext, 50);
                 };
 
-                utterance.onerror = (event) => {
-                    console.warn(`[BrowserTTS] Utterance error on chunk ${currentIndex}:`, event.error);
-                    // Try to continue with next sentence despite error
-                    speakNext();
+                utterance.onerror = () => {
+                    if (retryCount < 1) {
+                        retryCount += 1;
+                        setTimeout(speakNext, 60);
+                        return;
+                    }
+                    retryCount = 0;
+                    currentIndex += 1;
+                    setTimeout(speakNext, 60);
                 };
 
                 window.speechSynthesis.speak(utterance);
             };
 
-            // Start speaking the first sentence
-            speakNext();
-
-            // --- Safety timeout ---
-            // Generous estimate: ~100 words per minute, avg word = 5 chars
-            // This is a last-resort fallback; normal cleanup happens via onend chain.
-            const estimatedDuration = Math.max(15000, (text.length / 5) * 600 + 10000);
-            setTimeout(() => {
-                if (!finished && window.speechSynthesis.speaking) {
-                    console.warn('[BrowserTTS] Safety timeout reached — cancelling speech');
+            const estimatedDuration = Math.max(18000, (text.length / 5) * 650 + 12000);
+            safetyTimeout = setTimeout(() => {
+                if (!finished) {
                     window.speechSynthesis.cancel();
+                    cleanup();
+                    reject(new Error('Browser TTS timeout'));
                 }
-                cleanup();
             }, estimatedDuration);
-        } else {
-            setIsSpeaking(false);
-            setAvatarState('idle');
-        }
+
+            speakNext();
+        });
     };
 
     const startInterview = async () => {
@@ -1348,10 +1445,10 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                     { role: "assistant", content: data.response }
                 ]);
 
-                // Use browser TTS if enabled
+                // Use hybrid TTS if enabled
                 if (enableTTS) {
-                    console.log('[Video TTS] Starting browser TTS for response length:', data.response.length);
-                    speakWithBrowserTTS(data.response);
+                    console.log('[Video TTS] Starting hybrid TTS for response length:', data.response.length);
+                    speakText(data.response);
                 }
             }
             if (data.question_count) {
@@ -1989,7 +2086,9 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                                             <div className="interviewer-info">
                                                 <span className="interviewer-name">Saurabh</span>
                                                 <span className="interviewer-role">Senior Technical Interviewer</span>
-                                                <span className="interviewer-voice">🎙️ Professional Male Voice</span>
+                                                <span className="interviewer-voice">
+                                                    🎙️ {ttsVoiceInfo.engine === 'cloud' ? 'Cloud Male Voice' : 'Browser Male Voice'}
+                                                </span>
                                             </div>
                                             {interviewerGender === 'male' && (
                                                 <motion.div
@@ -2019,7 +2118,9 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                                             <div className="interviewer-info">
                                                 <span className="interviewer-name">Sarah</span>
                                                 <span className="interviewer-role">Senior Technical Interviewer</span>
-                                                <span className="interviewer-voice">🎙️ Professional Female Voice</span>
+                                                <span className="interviewer-voice">
+                                                    🎙️ {ttsVoiceInfo.engine === 'cloud' ? 'Cloud Female Voice' : 'Browser Female Voice'}
+                                                </span>
                                             </div>
                                             {interviewerGender === 'female' && (
                                                 <motion.div
@@ -2063,7 +2164,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                                     <div className="form-group">
                                         <p className="form-hint">
                                             💡 Voice uses your browser's built-in text-to-speech.
-                                            {interviewerGender === 'female' ? ' A female voice will be selected.' : ' A male voice will be selected.'}
+                                            {' '}Current mode: {getTTSStatusText() || 'Detecting...'}.
                                         </p>
                                     </div>
                                 )}

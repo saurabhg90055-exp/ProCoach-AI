@@ -454,6 +454,8 @@ class Message(BaseModel):
 
 class TextToSpeechRequest(BaseModel):
     text: str
+    interviewer_gender: Optional[str] = "female"
+    voice_id: Optional[str] = None
 
 
 class ResumeParseRequest(BaseModel):
@@ -678,13 +680,15 @@ def get_difficulties():
 @app.post("/tts")
 async def text_to_speech(request: TextToSpeechRequest):
     """Convert text to speech using Groq's enhanced TTS with better voice"""
+    female_voice = os.getenv("TTS_FEMALE_VOICE", "Ariana-PlayHT")
+    male_voice = os.getenv("TTS_MALE_VOICE", "Fritz-PlayHT")
+    preferred_voice = request.voice_id or (male_voice if request.interviewer_gender == "male" else female_voice)
+    fallback_voice = female_voice if preferred_voice == male_voice else male_voice
+
     try:
-        # Use a more natural, professional female voice for the interviewer
-        # Available PlayHT voices: Fritz, Ariana, Jennifer, etc.
-        # Ariana provides a warmer, more professional interview tone
         response = client.audio.speech.create(
             model="playht-tts",
-            voice="Ariana-PlayHT",  # Warmer, more natural female voice
+            voice=preferred_voice,
             input=request.text,
             response_format="wav"
         )
@@ -697,11 +701,10 @@ async def text_to_speech(request: TextToSpeechRequest):
         )
     except Exception as e:
         print(f"TTS Error: {e}")
-        # Fallback to Fritz if Ariana fails
         try:
             response = client.audio.speech.create(
                 model="playht-tts",
-                voice="Fritz-PlayHT",
+                voice=fallback_voice,
                 input=request.text,
                 response_format="wav"
             )
@@ -717,12 +720,12 @@ async def text_to_speech(request: TextToSpeechRequest):
 
 @app.get("/tts/voices")
 async def get_available_voices():
-    """Get info about browser TTS - actual voice selection happens client-side"""
+    """Get TTS voice info and fallback behavior"""
     return {
-        "info": "TTS is handled by browser Web Speech API for reliability",
-        "male_voice": {"name": "Male Interviewer", "description": "Browser's default male voice"},
-        "female_voice": {"name": "Female Interviewer", "description": "Browser's default female voice"},
-        "note": "Voice quality depends on browser and OS. Chrome and Edge typically have best voices."
+        "info": "Frontend uses hybrid TTS (browser first, cloud fallback on mobile/voice mismatch).",
+        "male_voice": {"name": os.getenv("TTS_MALE_VOICE", "Fritz-PlayHT"), "description": "Cloud male interviewer voice"},
+        "female_voice": {"name": os.getenv("TTS_FEMALE_VOICE", "Ariana-PlayHT"), "description": "Cloud female interviewer voice"},
+        "note": "Browser voice quality depends on device; cloud fallback keeps interviewer gender distinction."
     }
 
 
