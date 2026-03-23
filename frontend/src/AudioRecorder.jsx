@@ -133,6 +133,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
     const audioContextRef = useRef(null);
     const analyserRef = useRef(null);
     const audioUnlockedRef = useRef(false);
+    const mobileAudioElementRef = useRef(null); // Persistent audio element for mobile TTS
 
     // Unlock audio on mobile - must be called from user interaction (click/tap)
     const unlockAudio = useCallback(() => {
@@ -150,8 +151,31 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                 source.connect(ctx.destination);
                 source.start(0);
 
-                // Also create and play a silent HTML5 audio
-                const silentAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
+                // Create a persistent audio element for mobile TTS playback
+                // This element must be "warmed up" during user interaction
+                if (!mobileAudioElementRef.current) {
+                    const mobileAudio = new Audio();
+                    mobileAudio.preload = 'auto';
+                    mobileAudio.playsInline = true;
+                    mobileAudio.setAttribute('playsinline', 'true');
+                    mobileAudio.setAttribute('webkit-playsinline', 'true');
+                    mobileAudioElementRef.current = mobileAudio;
+                    console.log('[Audio] Persistent mobile audio element created');
+                }
+
+                // Warm up the persistent audio element with silent audio
+                const silentDataUri = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
+                mobileAudioElementRef.current.src = silentDataUri;
+                mobileAudioElementRef.current.play().then(() => {
+                    mobileAudioElementRef.current.pause();
+                    mobileAudioElementRef.current.currentTime = 0;
+                    console.log('[Audio] Persistent mobile audio element warmed up');
+                }).catch((e) => {
+                    console.log('[Audio] Mobile audio warm-up silent fail (expected on some browsers):', e.message);
+                });
+
+                // Also create temporary silent audio for additional unlock
+                const silentAudio = new Audio(silentDataUri);
                 silentAudio.play().then(() => {
                     audioUnlockedRef.current = true;
                     console.log('[Audio] Mobile audio unlocked successfully');
@@ -969,43 +993,77 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
             console.log('[TTS] Received audio blob:', blob.size, 'bytes, type:', blob.type);
 
             const audioUrl = URL.createObjectURL(blob);
+            const isMobile = isMobileBrowser();
 
-            // Create new Audio element for each playback to avoid mobile issues
-            const audio = new Audio();
-            audio.preload = 'auto';
+            // On mobile, reuse the persistent audio element that was unlocked during user interaction
+            // On desktop, create a new Audio element each time
+            let audio;
+            if (isMobile && mobileAudioElementRef.current) {
+                audio = mobileAudioElementRef.current;
+                // Clear any existing state
+                audio.pause();
+                audio.currentTime = 0;
+                // Remove old event listeners by cloning and replacing
+                audio.oncanplaythrough = null;
+                audio.onloadeddata = null;
+                audio.onended = null;
+                audio.onerror = null;
+                audio.onplay = null;
+                console.log('[TTS] Using persistent mobile audio element');
+            } else {
+                audio = new Audio();
+                audio.preload = 'auto';
+                // For iOS Safari
+                audio.playsInline = true;
+                audio.setAttribute('playsinline', 'true');
+                audio.setAttribute('webkit-playsinline', 'true');
+            }
 
             // Store reference for cleanup
             ttsAudioRef.current = audio;
 
             return new Promise((resolve, reject) => {
                 let playAttempted = false;
+                let currentAudioUrl = audioUrl; // Track the URL for cleanup
 
                 const attemptPlay = () => {
                     if (playAttempted) return;
                     playAttempted = true;
 
-                    audio.play()
-                        .then(() => {
-                            console.log('[TTS] Audio playback started');
-                            setTtsVoiceInfo({
-                                engine: 'cloud',
-                                matched: true,
-                                voiceName: interviewerGender === 'female' ? 'Ariana-PlayHT' : 'Fritz-PlayHT'
+                    // For mobile, try to play immediately with user gesture context
+                    const playPromise = audio.play();
+
+                    if (playPromise !== undefined) {
+                        playPromise
+                            .then(() => {
+                                console.log('[TTS] Audio playback started');
+                                setTtsVoiceInfo({
+                                    engine: 'cloud',
+                                    matched: true,
+                                    voiceName: interviewerGender === 'female' ? 'Ariana-PlayHT' : 'Fritz-PlayHT'
+                                });
+                            })
+                            .catch(err => {
+                                console.error('[TTS] Audio play failed:', err);
+                                URL.revokeObjectURL(currentAudioUrl);
+                                if (requestId === ttsRequestIdRef.current) {
+                                    setIsSpeaking(false);
+                                    setAvatarState('idle');
+                                }
+                                reject(err);
                             });
-                        })
-                        .catch(err => {
-                            console.error('[TTS] Audio play failed:', err);
-                            URL.revokeObjectURL(audioUrl);
-                            if (requestId === ttsRequestIdRef.current) {
-                                setIsSpeaking(false);
-                                setAvatarState('idle');
-                            }
-                            reject(err);
-                        });
+                    }
                 };
 
                 audio.oncanplaythrough = attemptPlay;
                 audio.onloadeddata = attemptPlay; // Fallback for some mobile browsers
+                audio.onloadedmetadata = () => {
+                    // Some mobile browsers fire this instead of oncanplaythrough
+                    if (!playAttempted && isMobile) {
+                        console.log('[TTS] Mobile onloadedmetadata triggered');
+                        attemptPlay();
+                    }
+                };
 
                 audio.onended = () => {
                     console.log('[TTS] Audio playback ended');
@@ -1013,7 +1071,7 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                         setIsSpeaking(false);
                         setAvatarState('idle');
                     }
-                    URL.revokeObjectURL(audioUrl);
+                    URL.revokeObjectURL(currentAudioUrl);
                     resolve();
                 };
 
@@ -1023,20 +1081,21 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                         setIsSpeaking(false);
                         setAvatarState('idle');
                     }
-                    URL.revokeObjectURL(audioUrl);
+                    URL.revokeObjectURL(currentAudioUrl);
                     reject(new Error('Audio playback error: ' + (audio.error?.message || 'unknown')));
                 };
 
+                // Set source and load
                 audio.src = audioUrl;
                 audio.load();
 
-                // Safety timeout in case events don't fire
+                // Safety timeout in case events don't fire - shorter for mobile
                 setTimeout(() => {
                     if (!playAttempted) {
                         console.log('[TTS] Safety timeout - attempting play');
                         attemptPlay();
                     }
-                }, 1000);
+                }, isMobile ? 500 : 1000);
             });
         } catch (error) {
             console.error('[TTS] Server TTS error:', error);
@@ -1075,7 +1134,15 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                 try {
                     const browserResult = await speakWithBrowserTTS(text, requestId);
                     if (!browserResult.ok) {
-                        showNotification('Voice playback unavailable on this device.', 'error', 4000);
+                        if (browserResult.reason === 'voice-fallback') {
+                            showNotification(`No ${interviewerGender} voice available on this device. Please read the questions.`, 'warning', 4000);
+                        } else if (browserResult.reason === 'no-voices') {
+                            showNotification('No voices available on this device. Please read the questions on screen.', 'error', 4000);
+                        } else {
+                            showNotification('Voice playback unavailable on this device.', 'error', 4000);
+                        }
+                        setIsSpeaking(false);
+                        setAvatarState('idle');
                     }
                 } catch (browserError) {
                     console.error('[TTS] Browser TTS fallback also failed:', browserError);
@@ -1094,7 +1161,9 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                 try {
                     await speakWithServerTTS(text, requestId);
                     if (browserResult.reason === 'voice-fallback') {
-                        showNotification('Using cloud voice for interviewer clarity on this device.', 'info', 3500);
+                        showNotification(`Using cloud ${interviewerGender} voice for clarity.`, 'info', 3500);
+                    } else if (browserResult.reason === 'no-voices') {
+                        showNotification('Using cloud voice (no local voices available).', 'info', 3500);
                     }
                 } catch (serverError) {
                     console.error('[TTS] Server fallback failed:', serverError);
@@ -1147,108 +1216,143 @@ const AudioRecorder = ({ settings = {}, onInterviewComplete, onRequireAuth }) =>
                 return;
             }
 
-            const voices = window.speechSynthesis.getVoices();
-            const { selectedVoice, matchedRequestedGender } = chooseVoiceForGender(voices, interviewerGender);
-
-            const shouldPreferServer = isMobileBrowser() && !matchedRequestedGender;
-            if (shouldPreferServer) {
-                resolve({ ok: false, reason: 'voice-fallback' });
-                return;
-            }
-
-            window.speechSynthesis.cancel();
-            setIsSpeaking(true);
-            setAvatarState('speaking');
-            if (soundEnabled) soundEffects.play('aiSpeaking');
-            setTtsVoiceInfo({
-                engine: 'browser',
-                matched: matchedRequestedGender,
-                voiceName: selectedVoice?.name || ''
-            });
-
-            const chunks = splitTextForTTS(text, isMobileBrowser() ? 130 : 160);
-            const disableKeepAlive = isIOSLike();
-            let keepAliveInterval = null;
-            let currentIndex = 0;
-            let finished = false;
-            let retryCount = 0;
-            let safetyTimeout = null;
-
-            const cleanup = () => {
-                if (finished) return;
-                finished = true;
-                if (keepAliveInterval) clearInterval(keepAliveInterval);
-                if (safetyTimeout) clearTimeout(safetyTimeout);
-                if (requestId === ttsRequestIdRef.current) {
-                    setIsSpeaking(false);
-                    setAvatarState('idle');
-                }
-            };
-
-            const startKeepAlive = () => {
-                if (disableKeepAlive) return;
-                if (keepAliveInterval) clearInterval(keepAliveInterval);
-                keepAliveInterval = setInterval(() => {
-                    if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
-                        window.speechSynthesis.pause();
-                        window.speechSynthesis.resume();
-                    }
-                }, 5000);
-            };
-
-            const speakNext = () => {
-                if (finished || requestId !== ttsRequestIdRef.current) {
-                    cleanup();
-                    resolve({ ok: true });
-                    return;
-                }
-
-                if (currentIndex >= chunks.length) {
-                    cleanup();
-                    resolve({ ok: true });
-                    return;
-                }
-
-                const utterance = new SpeechSynthesisUtterance(chunks[currentIndex]);
-                utterance.rate = 1.0;
-                utterance.pitch = 1.0;
-                utterance.volume = 1.0;
-                if (selectedVoice) utterance.voice = selectedVoice;
-
-                utterance.onstart = () => {
-                    if (currentIndex === 0) startKeepAlive();
-                };
-
-                utterance.onend = () => {
-                    retryCount = 0;
-                    currentIndex += 1;
-                    setTimeout(speakNext, 50);
-                };
-
-                utterance.onerror = () => {
-                    if (retryCount < 1) {
-                        retryCount += 1;
-                        setTimeout(speakNext, 60);
+            // Helper to get voices, with async fallback for mobile browsers
+            const getVoicesWithFallback = () => {
+                return new Promise((resolveVoices) => {
+                    let voices = window.speechSynthesis.getVoices();
+                    if (voices.length > 0) {
+                        resolveVoices(voices);
                         return;
                     }
-                    retryCount = 0;
-                    currentIndex += 1;
-                    setTimeout(speakNext, 60);
-                };
-
-                window.speechSynthesis.speak(utterance);
+                    // Some browsers (especially mobile) load voices asynchronously
+                    const onVoicesChanged = () => {
+                        voices = window.speechSynthesis.getVoices();
+                        window.speechSynthesis.removeEventListener('voiceschanged', onVoicesChanged);
+                        resolveVoices(voices);
+                    };
+                    window.speechSynthesis.addEventListener('voiceschanged', onVoicesChanged);
+                    // Timeout fallback if voiceschanged never fires
+                    setTimeout(() => {
+                        window.speechSynthesis.removeEventListener('voiceschanged', onVoicesChanged);
+                        resolveVoices(window.speechSynthesis.getVoices());
+                    }, 500);
+                });
             };
 
-            const estimatedDuration = Math.max(18000, (text.length / 5) * 650 + 12000);
-            safetyTimeout = setTimeout(() => {
-                if (!finished) {
-                    window.speechSynthesis.cancel();
-                    cleanup();
-                    reject(new Error('Browser TTS timeout'));
-                }
-            }, estimatedDuration);
+            getVoicesWithFallback().then((voices) => {
+                const { selectedVoice, matchedRequestedGender } = chooseVoiceForGender(voices, interviewerGender);
 
-            speakNext();
+                // On mobile, if no matching voice found, prefer server TTS for consistent gender
+                const shouldPreferServer = isMobileBrowser() && !matchedRequestedGender;
+                if (shouldPreferServer) {
+                    console.log('[TTS] No matching', interviewerGender, 'voice found on mobile, preferring server');
+                    resolve({ ok: false, reason: 'voice-fallback' });
+                    return;
+                }
+
+                // If no voices at all available, return unsupported
+                if (!selectedVoice && voices.length === 0) {
+                    console.log('[TTS] No voices available on this device');
+                    resolve({ ok: false, reason: 'no-voices' });
+                    return;
+                }
+
+                window.speechSynthesis.cancel();
+                setIsSpeaking(true);
+                setAvatarState('speaking');
+                if (soundEnabled) soundEffects.play('aiSpeaking');
+                setTtsVoiceInfo({
+                    engine: 'browser',
+                    matched: matchedRequestedGender,
+                    voiceName: selectedVoice?.name || ''
+                });
+
+                const chunks = splitTextForTTS(text, isMobileBrowser() ? 130 : 160);
+                const disableKeepAlive = isIOSLike();
+                let keepAliveInterval = null;
+                let currentIndex = 0;
+                let finished = false;
+                let retryCount = 0;
+                let safetyTimeout = null;
+
+                const cleanup = () => {
+                    if (finished) return;
+                    finished = true;
+                    if (keepAliveInterval) clearInterval(keepAliveInterval);
+                    if (safetyTimeout) clearTimeout(safetyTimeout);
+                    if (requestId === ttsRequestIdRef.current) {
+                        setIsSpeaking(false);
+                        setAvatarState('idle');
+                    }
+                };
+
+                const startKeepAlive = () => {
+                    if (disableKeepAlive) return;
+                    if (keepAliveInterval) clearInterval(keepAliveInterval);
+                    keepAliveInterval = setInterval(() => {
+                        if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
+                            window.speechSynthesis.pause();
+                            window.speechSynthesis.resume();
+                        }
+                    }, 5000);
+                };
+
+                const speakNext = () => {
+                    if (finished || requestId !== ttsRequestIdRef.current) {
+                        cleanup();
+                        resolve({ ok: true });
+                        return;
+                    }
+
+                    if (currentIndex >= chunks.length) {
+                        cleanup();
+                        resolve({ ok: true });
+                        return;
+                    }
+
+                    const utterance = new SpeechSynthesisUtterance(chunks[currentIndex]);
+                    utterance.rate = 1.0;
+                    utterance.pitch = 1.0;
+                    utterance.volume = 1.0;
+                    if (selectedVoice) utterance.voice = selectedVoice;
+
+                    utterance.onstart = () => {
+                        if (currentIndex === 0) startKeepAlive();
+                    };
+
+                    utterance.onend = () => {
+                        retryCount = 0;
+                        currentIndex += 1;
+                        setTimeout(speakNext, 50);
+                    };
+
+                    utterance.onerror = (e) => {
+                        // On mobile, some errors are not fatal
+                        console.log('[TTS] Browser utterance error:', e.error);
+                        if (retryCount < 1) {
+                            retryCount += 1;
+                            setTimeout(speakNext, 60);
+                            return;
+                        }
+                        retryCount = 0;
+                        currentIndex += 1;
+                        setTimeout(speakNext, 60);
+                    };
+
+                    window.speechSynthesis.speak(utterance);
+                };
+
+                const estimatedDuration = Math.max(18000, (text.length / 5) * 650 + 12000);
+                safetyTimeout = setTimeout(() => {
+                    if (!finished) {
+                        window.speechSynthesis.cancel();
+                        cleanup();
+                        reject(new Error('Browser TTS timeout'));
+                    }
+                }, estimatedDuration);
+
+                speakNext();
+            });
         });
     };
 
